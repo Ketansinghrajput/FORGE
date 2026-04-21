@@ -23,7 +23,7 @@ public class BiddingEngine {
 
         if (strategy != null && strategy.isValid(bid, book.getBestBid())) {
             book.addBid(bid);
-            // Future: EventBus triggers here
+            // Future: EventBus triggers here [cite: 1053]
         }
     }
 }

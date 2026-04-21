@@ -7,7 +7,7 @@ import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 public class BidBook {
-    // Thread-safe O(log n) sorting
+    // Thread-safe O(log n) sorting using ConcurrentSkipListMap [cite: 316]
     private final NavigableMap<BidKey, Bid> bids = new ConcurrentSkipListMap<>();
 
     public void addBid(Bid bid) {
