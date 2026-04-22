@@ -1,0 +1,25 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: forge-postgres
+    environment:
+      POSTGRES_DB: forge_db
+      POSTGRES_USER: forge_user
+      POSTGRES_PASSWORD: forge_pass
+    ports:
+      - "5432:5432"
+    networks:
+      - forge-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: forge-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - forge-net
+
+networks:
+  forge-net:
+    driver: bridge
