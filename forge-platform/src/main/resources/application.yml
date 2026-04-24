@@ -5,29 +5,32 @@ spring:
     active: dev
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/forge_db
-    username: forge_user
-    password: forge_pass
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:h2:mem:forgedb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
 
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create
     show-sql: true
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        globally_quoted_identifiers: false
 
-  data:
-    redis:
-      host: localhost
-      port: 6379
+  flyway:
+    enabled: false
 
-  spring:
-    jpa:
-      hibernate:
-        ddl-auto: validate
-    flyway:
-      enabled: true
-      baseline-on-migrate: true
+application:
+  security:
+    jwt:
+      secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      expiration: 86400000
