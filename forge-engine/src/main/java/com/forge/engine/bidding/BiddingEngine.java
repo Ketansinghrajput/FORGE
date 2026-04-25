@@ -1,29 +1,42 @@
 package com.forge.engine.bidding;
 
-import com.forge.engine.auction.AuctionType;
-import com.forge.engine.event.EventBus;
-import com.forge.engine.model.Bid;
 import com.forge.engine.pricing.PricingStrategy;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.forge.engine.model.Bid;
+import com.forge.engine.event.EventBus;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class BiddingEngine {
-    private final Map<Long, BidBook> auctionBids = new ConcurrentHashMap<>();
-    private final Map<AuctionType, PricingStrategy> strategies;
+    private final PricingStrategy pricingStrategy;
+    private final BidBook bidBook;
     private final EventBus eventBus;
+    private final AtomicReference<Bid> currentHighestBid;
 
-    public BiddingEngine(Map<AuctionType, PricingStrategy> strategies, EventBus eventBus) {
-        this.strategies = strategies;
-        this.eventBus = eventBus;
+    public BiddingEngine(PricingStrategy strategy, BidBook book, EventBus bus, Bid initialPrice) {
+        this.pricingStrategy = strategy;
+        this.bidBook = book;
+        this.eventBus = bus;
+        this.currentHighestBid = new AtomicReference<>(initialPrice);
     }
 
-    public void processBid(Bid bid, AuctionType type) {
-        BidBook book = auctionBids.computeIfAbsent(bid.auctionId(), k -> new BidBook());
-        PricingStrategy strategy = strategies.get(type);
+    public synchronized boolean placeBid(Bid newBid) {
+        Bid current = currentHighestBid.get();
 
-        if (strategy != null && strategy.isValid(bid, book.getBestBid())) {
-            book.addBid(bid);
-            // Future: EventBus triggers here [cite: 1053]
+
+        if (pricingStrategy.isValidIncrement(current.getPrice(), newBid.getPrice())) {
+            currentHighestBid.set(newBid);
+
+            // bidBook logic
+            bidBook.addBid(newBid);
+
+            // eventBus logic
+            eventBus.publish("AUCTION_UPDATE", newBid);
+
+            return true;
         }
+        return false;
+    }
+
+    public Bid getCurrentHighestBid() {
+        return currentHighestBid.get();
     }
 }

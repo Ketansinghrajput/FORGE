@@ -18,10 +18,12 @@ import java.util.Optional;
 public interface AuctionRepository extends JpaRepository<Auction, Long>, JpaSpecificationExecutor<Auction> {
 
     List<Auction> findByStatus(AuctionStatus status);
-    List<Auction> findAllByStatusAndEndTimeBefore(AuctionStatus status, LocalDateTime dateTime);
+
+    List<Auction> findByStatusAndEndTimeBefore(AuctionStatus status, LocalDateTime currentTime);
 
     @Query("SELECT a FROM Auction a JOIN FETCH a.seller WHERE a.id = :id")
     Optional<Auction> findByIdWithSeller(@Param("id") Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT a FROM Auction a WHERE a.id = :id")
     Optional<Auction> findByIdWithLock(@Param("id") Long id);

@@ -1,7 +1,9 @@
 package com.forge.engine.pricing;
 
-import com.forge.engine.model.Bid;
+import com.forge.engine.model.Money;
 
 public interface PricingStrategy {
-    boolean isValid(Bid newBid, Bid currentBestBid);
+    boolean isValidIncrement(Money currentPrice, Money newBidPrice);
+
+    Money calculateNextMinimum(Money currentPrice);
 }

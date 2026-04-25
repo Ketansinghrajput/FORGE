@@ -11,8 +11,7 @@ public class BidBook {
     private final NavigableMap<BidKey, Bid> bids = new ConcurrentSkipListMap<>();
 
     public void addBid(Bid bid) {
-        bids.put(new BidKey(bid.amount(), bid.timestamp()), bid);
-    }
+        bids.put(new BidKey(bid.getPrice(), bid.getTimestamp()), bid);    }
 
     public Bid getBestBid() {
         return bids.isEmpty() ? null : bids.firstEntry().getValue();
