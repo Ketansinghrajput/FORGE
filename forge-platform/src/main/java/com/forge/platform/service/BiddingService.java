@@ -6,6 +6,7 @@ import com.forge.platform.entity.User;
 import com.forge.platform.enums.AuctionStatus;
 import com.forge.platform.repository.AuctionRepository;
 import com.forge.platform.repository.BidRepository;
+import com.forge.platform.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -23,63 +24,80 @@ public class BiddingService {
 
     private final AuctionRepository auctionRepository;
     private final BidRepository bidRepository;
+    private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+
 
     @Transactional
     public Bid placeBid(Long auctionId, User bidder, BigDecimal bidAmount) {
-        log.info("Attempting to place bid of {} on auction {} by user {}", bidAmount, auctionId, bidder.getEmail());
+        log.info("Processing bid: {} by {} on auction {}", bidAmount, bidder.getEmail(), auctionId);
 
-        // 1. Lock the auction row (Race condition prevention)
-        // findByIdWithLock humne AuctionRepository mein likha hai
+        // 1. Pessimistic Locking: Row lock taaki koi aur simultaneous bid process na ho
         Auction auction = auctionRepository.findByIdWithLock(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found"));
 
-        // 2. Run Industrial Validation
+        // 2. Industrial Validations (Fraud, Time, and Balance checks)
         validateBid(auction, bidder, bidAmount);
 
-        // 3. Update Auction State
+        // 3. REFUND LOGIC: Purane highest bidder ko uske paise wapas karo
+        if (auction.getHighestBidder() != null) {
+            User previousBidder = auction.getHighestBidder();
+            BigDecimal refundAmount = auction.getCurrentHighestBid();
+
+            previousBidder.setWalletBalance(previousBidder.getWalletBalance().add(refundAmount));
+            userRepository.save(previousBidder);
+            log.info("Refunded {} to previous bidder {}", refundAmount, previousBidder.getEmail());
+        }
+
+        // 4. DEBIT LOGIC: Naye bidder ke account se bid amount kato
+        bidder.setWalletBalance(bidder.getWalletBalance().subtract(bidAmount));
+        userRepository.save(bidder);
+        log.info("Debited {} from current bidder {}", bidAmount, bidder.getEmail());
+
+        // 5. UPDATE AUCTION STATE: Naya price aur naya highest bidder set karo
         auction.setCurrentHighestBid(bidAmount);
+        auction.setHighestBidder(bidder);
         auctionRepository.save(auction);
 
-        // 4. Record the Bid
+        // 6. RECORD THE BID: Persistence for Audit Trail
         Bid bid = Bid.builder()
                 .auction(auction)
                 .bidder(bidder)
                 .amount(bidAmount)
                 .successful(true)
+                .createdAt(LocalDateTime.now())
                 .build();
 
         Bid savedBid = bidRepository.save(bid);
 
-        // 5. Real-time Broadcast via WebSocket
-        // Ab frontend ko bina refresh kiye update milega
+        // 7. REAL-TIME BROADCAST: WebSocket notification for Frontend
         broadcastUpdate(auctionId, bidAmount, bidder.getFullName());
 
         return savedBid;
     }
 
     private void validateBid(Auction auction, User bidder, BigDecimal amount) {
-        // Rule: Auction must be ACTIVE
+        // Auction Status Check
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             throw new IllegalStateException("Auction is not active or has already ended");
         }
 
-        // Rule: Time check
+        // Time Validation
         if (LocalDateTime.now().isAfter(auction.getEndTime())) {
             throw new IllegalStateException("Auction time expired");
         }
 
-        // Rule: Bid increments
+        // Price Increment Check
         if (amount.compareTo(auction.getCurrentHighestBid()) <= 0) {
             throw new IllegalArgumentException("Bid must be strictly higher than current price: " + auction.getCurrentHighestBid());
         }
 
-        // Rule: Self-bidding check (Fraud Prevention)
+        // Self-bidding Prevention
         if (auction.getSeller().getId().equals(bidder.getId())) {
             throw new IllegalArgumentException("You cannot bid on your own auction");
         }
 
-        // Rule: Wallet sufficiency
+        // Real-time Wallet Sufficiency Check
         if (bidder.getWalletBalance().compareTo(amount) < 0) {
             throw new IllegalArgumentException("Insufficient wallet balance for this bid");
         }

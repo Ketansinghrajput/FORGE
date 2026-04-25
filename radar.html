@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Forge Engine - Live Radar</title>
+    <style>
+        body { background-color: #121212; color: #00FFCC; font-family: monospace; padding: 20px; }
+        #messages { border: 1px solid #333; padding: 10px; height: 300px; overflow-y: scroll; margin-top: 20px; }
+        .bid-alert { color: #FFD700; font-weight: bold; margin-bottom: 5px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+
+    <h2>📡 Forge Platform - WebSocket Radar</h2>
+    <button onclick="connect()" style="padding: 10px; background: #00FFCC; border: none; cursor: pointer; font-weight: bold;">CONNECT TO ENGINE</button>
+    
+    <div id="messages">
+        <div>System: Waiting for connection...</div>
+    </div>
+
+   <script>
+        var stompClient = null;
+
+        function connect() {
+            var socket = new SockJS('http://localhost:8080/ws-forge');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                document.getElementById('messages').innerHTML += '<div>System: Connected to Forge Engine! 🟢</div>';
+                
+                stompClient.subscribe('/topic/auctions/1', function (message) {
+                    var data = JSON.parse(message.body);
+                    
+                    // Smart Routing: Check if it's a Closure Alert or a Bid
+                    if (data.status === "CLOSED" || data.status === "COMPLETED") {
+                        showSystemAlert(data);
+                    } else {
+                        showLiveBid(data);
+                    }
+                });
+            }, function(error) {
+                document.getElementById('messages').innerHTML += '<div style="color:red">System: Connection Failed! 🔴 Check CORS or Endpoint.</div>';
+            });
+        }
+
+        function showLiveBid(data) {
+            var messagesDiv = document.getElementById('messages');
+            var alertHtml = `<div class="bid-alert">🔥 LIVE BID: ${data.bidder} just bid ₹${data.newPrice} on Auction #${data.auctionId}!</div>`;
+            messagesDiv.innerHTML += alertHtml;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function showSystemAlert(data) {
+            var messagesDiv = document.getElementById('messages');
+            var alertHtml = `<div style="color: #FF00FF; font-weight: bold; margin-bottom: 5px;">🛑 SYSTEM ALERT: ${data.message}</div>`;
+            messagesDiv.innerHTML += alertHtml;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    </script>
+</body>
+</html>

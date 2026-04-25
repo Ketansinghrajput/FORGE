@@ -56,4 +56,7 @@ public class Auction extends BaseEntity {
     @JsonIgnore
     @Audited(targetAuditMode = RelationTargetAuditMode.NOT_AUDITED)
     private User seller;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "highest_bidder_id")
+    private User highestBidder;
 }
