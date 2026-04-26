@@ -5,30 +5,30 @@ spring:
     active: dev
 
   datasource:
-    url: jdbc:h2:mem:forgedb;DB_CLOSE_DELAY=-1;NON_KEYWORDS=USER
-    driverClassName: org.h2.Driver
-    username: sa
-    password: password
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: sensei
+    driver-class-name: org.postgresql.Driver
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     show-sql: true
     open-in-view: false
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-        globally_quoted_identifiers: false
+
+  # ✅ CORRECT JACKSON CONFIG
+  jackson:
+    serialization:
+      fail-on-empty-beans: false
 
   flyway:
     enabled: false
 
+# Custom Security Properties
 application:
   security:
     jwt:

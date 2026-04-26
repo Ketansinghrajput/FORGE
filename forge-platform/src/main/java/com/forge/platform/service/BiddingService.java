@@ -3,10 +3,12 @@ package com.forge.platform.service;
 import com.forge.platform.entity.Auction;
 import com.forge.platform.entity.Bid;
 import com.forge.platform.entity.User;
+import com.forge.platform.entity.Wallet;
 import com.forge.platform.enums.AuctionStatus;
 import com.forge.platform.repository.AuctionRepository;
 import com.forge.platform.repository.BidRepository;
 import com.forge.platform.repository.UserRepository;
+import com.forge.platform.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -25,41 +27,44 @@ public class BiddingService {
     private final AuctionRepository auctionRepository;
     private final BidRepository bidRepository;
     private final UserRepository userRepository;
+    private final WalletRepository walletRepository;
     private final SimpMessagingTemplate messagingTemplate;
-
 
     @Transactional
     public Bid placeBid(Long auctionId, User bidder, BigDecimal bidAmount) {
         log.info("Processing bid: {} by {} on auction {}", bidAmount, bidder.getEmail(), auctionId);
 
-        // 1. Pessimistic Locking: Row lock taaki koi aur simultaneous bid process na ho
-        Auction auction = auctionRepository.findByIdWithLock(auctionId)
+        // 1. Fetch Auction (Make sure your repo has findById or findByIdWithLock)
+        Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found"));
 
-        // 2. Industrial Validations (Fraud, Time, and Balance checks)
-        validateBid(auction, bidder, bidAmount);
+        // 2. Fetch Bidder's Wallet
+        Wallet bidderWallet = walletRepository.findByUser(bidder)
+                .orElseThrow(() -> new RuntimeException("Wallet not found for bidder: " + bidder.getEmail()));
 
-        // 3. REFUND LOGIC: Purane highest bidder ko uske paise wapas karo
+        // 3. Validations
+        validateBid(auction, bidder, bidderWallet, bidAmount);
+
+        // 4. Refund previous highest bidder (Lien Reversal)
         if (auction.getHighestBidder() != null) {
             User previousBidder = auction.getHighestBidder();
-            BigDecimal refundAmount = auction.getCurrentHighestBid();
-
-            previousBidder.setWalletBalance(previousBidder.getWalletBalance().add(refundAmount));
-            userRepository.save(previousBidder);
-            log.info("Refunded {} to previous bidder {}", refundAmount, previousBidder.getEmail());
+            walletRepository.findByUser(previousBidder).ifPresent(prevWallet -> {
+                prevWallet.setLockedAmount(BigDecimal.ZERO);
+                walletRepository.save(prevWallet);
+                log.info("Escrow released for previous bidder: {}", previousBidder.getEmail());
+            });
         }
 
-        // 4. DEBIT LOGIC: Naye bidder ke account se bid amount kato
-        bidder.setWalletBalance(bidder.getWalletBalance().subtract(bidAmount));
-        userRepository.save(bidder);
-        log.info("Debited {} from current bidder {}", bidAmount, bidder.getEmail());
+        // 5. Lock funds for current bidder
+        bidderWallet.setLockedAmount(bidAmount);
+        walletRepository.save(bidderWallet);
 
-        // 5. UPDATE AUCTION STATE: Naya price aur naya highest bidder set karo
-        auction.setCurrentHighestBid(bidAmount);
+        // 6. Update Auction State - MATCHING YOUR ENTITY FIELDS EXACTLY
+        auction.setCurrentHighestBid(bidAmount); // Method name should match field 'currentHighestBid'
         auction.setHighestBidder(bidder);
         auctionRepository.save(auction);
 
-        // 6. RECORD THE BID: Persistence for Audit Trail
+        // 7. Persistence
         Bid bid = Bid.builder()
                 .auction(auction)
                 .bidder(bidder)
@@ -70,47 +75,47 @@ public class BiddingService {
 
         Bid savedBid = bidRepository.save(bid);
 
-        // 7. REAL-TIME BROADCAST: WebSocket notification for Frontend
+        // 8. WebSocket Notification
         broadcastUpdate(auctionId, bidAmount, bidder.getFullName());
 
         return savedBid;
     }
 
-    private void validateBid(Auction auction, User bidder, BigDecimal amount) {
-        // Auction Status Check
+    private void validateBid(Auction auction, User bidder, Wallet wallet, BigDecimal amount) {
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
-            throw new IllegalStateException("Auction is not active or has already ended");
+            throw new IllegalStateException("Auction is not active");
         }
 
-        // Time Validation
         if (LocalDateTime.now().isAfter(auction.getEndTime())) {
-            throw new IllegalStateException("Auction time expired");
+            throw new IllegalStateException("Auction has already ended");
         }
 
-        // Price Increment Check
+        // 🚀 Check against currentHighestBid
         if (amount.compareTo(auction.getCurrentHighestBid()) <= 0) {
-            throw new IllegalArgumentException("Bid must be strictly higher than current price: " + auction.getCurrentHighestBid());
+            throw new IllegalArgumentException("Bid must be higher than current price: " + auction.getCurrentHighestBid());
         }
 
-        // Self-bidding Prevention
         if (auction.getSeller().getId().equals(bidder.getId())) {
-            throw new IllegalArgumentException("You cannot bid on your own auction");
+            throw new IllegalArgumentException("Sellers cannot bid on their own items");
         }
 
-        // Real-time Wallet Sufficiency Check
-        if (bidder.getWalletBalance().compareTo(amount) < 0) {
-            throw new IllegalArgumentException("Insufficient wallet balance for this bid");
+        if (wallet.getAvailableBalance().compareTo(amount) < 0) {
+            throw new IllegalArgumentException("Insufficient available balance.");
         }
     }
 
     private void broadcastUpdate(Long auctionId, BigDecimal amount, String bidderName) {
-        String destination = "/topic/auctions/" + auctionId;
-        Map<String, Object> payload = Map.of(
-                "auctionId", auctionId,
-                "newPrice", amount,
-                "bidder", bidderName,
-                "timestamp", LocalDateTime.now().toString()
-        );
-        messagingTemplate.convertAndSend(destination, payload);
+        try {
+            String destination = "/topic/auctions/" + auctionId;
+            Map<String, Object> payload = Map.of(
+                    "auctionId", auctionId,
+                    "newPrice", amount,
+                    "bidder", bidderName,
+                    "timestamp", LocalDateTime.now().toString()
+            );
+            messagingTemplate.convertAndSend(destination, payload);
+        } catch (Exception e) {
+            log.error("Failed to broadcast WebSocket update", e);
+        }
     }
 }
