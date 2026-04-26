@@ -6,8 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -15,15 +13,14 @@ public class AuctionTask {
 
     private final AuctionService auctionService;
 
-    @Scheduled(fixedRate = 60000, initialDelay = 10000)
-    public void closeExpiredAuctions() {
+    // Har 1 minute mein chalega (60000ms)
+    @Scheduled(fixedRate = 60000)
+    public void checkExpiredAuctions() {
+        log.info("AuctionTask: Running scheduled expiry check...");
         try {
-            log.info("Cron Triggered: Checking for expired auctions at {}", LocalDateTime.now());
-
             auctionService.processExpiredAuctions();
-
         } catch (Exception e) {
-            log.error("Could not process auctions. Error: {}", e.getMessage());
+            log.error("Error during auction expiry task: {}", e.getMessage());
         }
     }
 }

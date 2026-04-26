@@ -18,16 +18,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @SuperBuilder
 public abstract class BaseEntity {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @CreatedDate
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate
-    @Column(name = "updated_at")
+    @Column(insertable = false)
     private LocalDateTime updatedAt;
 }
