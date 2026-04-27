@@ -2,27 +2,29 @@ package com.forge.engine.model;
 
 import java.time.Instant;
 
-public class Bid {
-    private final String bidderId;
-    private final Money price;
-    private final Instant timestamp; // Nayi field add ki
+public record Bid(BidKey bidKey, String bidderId) {
 
+    // Backward Compatibility Constructor: Tera purana code yahi constructor call karega
+    // aur yeh automatically naya BidKey object generate kar lega!
     public Bid(String bidderId, Money price) {
-        this.bidderId = bidderId;
-        this.price = price;
-        this.timestamp = Instant.now(); // Jaise hi object banega, time record ho jayega!
+        this(new BidKey(price, Instant.now()), bidderId);
     }
 
-    // Getters
+    // --- OLD GETTERS (Taaki tera bacha hua code break na ho) ---
     public Money getPrice() {
-        return price;
+        return bidKey.amount();
     }
 
     public String getBidderId() {
         return bidderId;
     }
 
-    public Instant getTimestamp() { // Getter for timestamp
-        return timestamp;
+    public Instant getTimestamp() {
+        return bidKey.timestamp();
+    }
+
+    // --- NEW GETTER FOR ENGINE (PriceTracker error solve karne ke liye) ---
+    public Money amount() {
+        return bidKey.amount();
     }
 }

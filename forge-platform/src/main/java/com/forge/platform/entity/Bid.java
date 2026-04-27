@@ -4,12 +4,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bids")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-@SuperBuilder
+@SuperBuilder // Required because you are using BaseEntity
 public class Bid extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -24,4 +25,7 @@ public class Bid extends BaseEntity {
     private BigDecimal amount;
 
     private boolean successful;
+
+    // Isse add karo kyunki service isse use kar rahi hai
+    private LocalDateTime createdAt;
 }

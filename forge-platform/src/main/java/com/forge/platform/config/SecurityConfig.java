@@ -25,15 +25,18 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // 1. In par koi rok-tok nahi
+                        // 1. Auth aur Swagger paths
                         .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // 2. Exact Authority Match: Kyunki tere token mein "ROLE_USER" dikh raha hai
-                        // hasRole("USER") ki jagah hasAuthority("ROLE_USER") zyada safe hai yahan
+                        // 2. Engine Test Endpoint: Testing ke liye permitAll
+                        // (Postman mein bina JWT ke chal jayega)
+                        .requestMatchers("/api/bids/**").permitAll()
+
+                        // 3. Secured Resources: Inke liye JWT lagega
                         .requestMatchers("/api/v1/auctions/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/api/v1/wallet/**").hasAuthority("ROLE_USER")
 
-                        // 3. Global Guard
+                        // 4. Global Guard
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
