@@ -1,11 +1,13 @@
 package com.forge.platform.bridge;
 
+import com.forge.engine.event.BidPlacedEvent;
 import com.forge.engine.event.EventBus;
-import com.forge.engine.model.Bid;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class AuctionWebSocketBridge {
 
@@ -19,11 +21,20 @@ public class AuctionWebSocketBridge {
 
     @PostConstruct
     public void bridgeEngineToWeb() {
-        eventBus.subscribe("AUCTION_UPDATE", data -> {
-            if (data instanceof Bid bid) {
-                // Yahan "/1" add kar diya taaki UI ke topic se match ho jaye
-                messagingTemplate.convertAndSend("/topic/auctions/1", bid);
-                System.out.println("⚡ Real-time Broadcast to /topic/auctions/1: ₹" + bid.getPrice().amount());
+        // Naye EventBus mein sirf event listener pass hota hai
+        eventBus.subscribe(event -> {
+            // Pattern Matching: Agar event 'BidPlacedEvent' type ka hai toh cast bhi khud ho jayega
+            if (event instanceof BidPlacedEvent bidEvent) {
+                String destination = "/topic/auctions/" + bidEvent.auctionId();
+
+                // WebSocket broadcast
+                messagingTemplate.convertAndSend(destination, bidEvent.bid());
+
+                log.info("⚡ Real-time Broadcast to {}: {} by {}",
+                        destination,
+                        bidEvent.bid().getPrice().getAmount(),
+                        bidEvent.bid().getBidderId()
+                );
             }
         });
     }

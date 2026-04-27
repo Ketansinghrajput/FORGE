@@ -1,35 +1,67 @@
 package com.forge.engine.event;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Consumer;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
+@Slf4j
 public class EventBus {
-    // CopyOnWriteArrayList ensures thread-safety during iteration and modification
-    private final Map<String, List<Consumer<Object>>> listeners = new ConcurrentHashMap<>();
 
-    public void subscribe(String topic, Consumer<Object> listener) {
-        // computeIfAbsent is atomic. CopyOnWriteArrayList is thread-safe for reads/writes.
-        listeners.computeIfAbsent(topic, k -> new CopyOnWriteArrayList<>()).add(listener);
+    // 1. Thread-safe list of listeners (No more String topics, we use Type checking now)
+    private final List<EngineEventListener> listeners = new CopyOnWriteArrayList<>();
+
+    // 2. The Buffer: Engine puts events here instantly.
+    private final LinkedBlockingQueue<EngineEvent> eventQueue = new LinkedBlockingQueue<>();
+
+    // 3. Java 21 Virtual Threads Pool
+    private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+    public EventBus() {
+        // Start the background consumer loop the moment EventBus is created
+        virtualExecutor.submit(this::processEvents);
     }
 
-    public void publish(String topic, Object data) {
-        List<Consumer<Object>> topicListeners = listeners.get(topic);
-        if (topicListeners != null) {
-            for (Consumer<Object> listener : topicListeners) {
-                try {
-                    // Try-catch ensures one bad listener doesn't kill the whole bus
-                    listener.accept(data);
-                } catch (Exception e) {
-                    System.err.println("❌ EventBus Error in topic [" + topic + "]: " + e.getMessage());
+    public void subscribe(EngineEventListener listener) {
+        listeners.add(listener);
+        log.info("New listener subscribed to EventBus");
+    }
+
+    /**
+     * PRODUCER: Called by BiddingEngine.
+     * Extremely fast. Just drops the event in the queue and returns.
+     */
+    public void publish(EngineEvent event) {
+        eventQueue.offer(event);
+    }
+
+    /**
+     * CONSUMER: Infinite background loop running on a Virtual Thread.
+     */
+    private void processEvents() {
+        log.info("EventBus Background Consumer Loop Started...");
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                // .take() blocks efficiently until an event arrives
+                EngineEvent event = eventQueue.take();
+
+                // Fire and forget: Broadcast to all listeners asynchronously
+                for (EngineEventListener listener : listeners) {
+                    virtualExecutor.submit(() -> {
+                        try {
+                            listener.onEvent(event);
+                        } catch (Exception e) {
+                            log.error("Listener failed to process event: {}", event, e);
+                        }
+                    });
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.error("EventBus consumer loop interrupted. Shutting down.");
+                break;
             }
         }
-    }
-
-    // Optional: Memory clean-up ke liye method (Interviews mein impress karne ke liye)
-    public void unsubscribeAll(String topic) {
-        listeners.remove(topic);
     }
 }
