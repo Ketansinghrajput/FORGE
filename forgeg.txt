@@ -1,0 +1,51 @@
+steps line se follow kar:
+
+1. Check ALL containers (Stopped wale bhi)
+Terminal mein yeh daal:
+
+Bash
+docker ps -a
+Agar list mein koi purana postgres ka container dikhe, toh uska NAME copy kar aur likh: docker start <woh_name>
+
+2. Agar koi container nahi hai (Fresh Start)
+Agar docker ps -a mein bhi kuch nahi hai, toh ek naya Postgres container is command se launch kar (isne password aur port dono set kar diye hain):
+
+Bash
+docker run --name forge-postgres -e POSTGRES_PASSWORD=sensei -p 5432:5432 -d postgres
+3. Database Create Kar
+Ek baar container chal gaya (ab docker ps karne pe dikhega), toh yeh command daal uske andar ghusne ke liye:
+
+Bash
+docker exec -it forge-postgres psql -U postgres
+Jab terminal postgres=# ban jaye, tab wahan yeh command fire kar:
+
+SQL
+CREATE DATABASE forge_db;
+Aur fir \q daba ke bahar aaja.
+
+Phase 1: Persistence & Identity (The "Real World" Base)
+Abhi tera data volatile hai. Isse "Pakka" karna hai.
+• [ ] Database Integration: MySQL/PostgreSQL connect karna (application.properties).
+• [ ] Entity Design: User, Auction, aur Bid entities banana.
+• [ ] JPA Repositories: Data save aur fetch karne ke liye interfaces.
+• [ ] Initial Data Loader: Server start hote hi 2-3 items auction mein automatically daalne ke liye.
+• [ ] Current Bid Sync: Page refresh pe REST API se "Latest Bid" uthana (WebSocket se pehle).
+Phase 2: Security & Authentication (The "Lock")
+Bina user ke PII Masker ka maza nahi aayega.
+• [ ] User Signup/Login: Spring Security + JWT integration.
+• [ ] Auth Guards: Frontend pe "Profile" aur "Place Bid" ko secure karna.
+• [ ] PII Masker Library: Apni Maven library ko pom.xml mein add karke logs aur response mask karna.
+Phase 3: The "Forge" Marketplace (The UI Expansion)
+Single page se aage nikalna hai.
+• [ ] Marketplace Home: Cards dikhana saare active auctions ke.
+• [ ] User Profile & Settings: Profile update aur personal bid history.
+• [ ] Wallet System: Paisa add karna aur funds lock hone ka logic.
+Phase 4: Intelligence & Scale (The "Sensei" Special)
+Ye hai 14 LPA wala zone.
+• [ ] Spring AI Integration: Smart Bidding Assistant (Chatbot) jo item description analyze kare.
+• [ ] Redis Caching: High concurrency handle karne ke liye "Latest Bid" ko Redis mein rakhna.
+• [ ] Notifications: "Outbid" hone pe frontend alert ya email.
+Phase 5: Production Ready (The "Barclays" Standard)
+• [ ] Load Testing: JMeter se 100+ concurrent users simulate karna.
+• [ ] Dockerization: Pure setup ko docker-compose se ek command pe chalu karna.
+• [ ] Documentation: Ek solid README.md jisme architecture diagrams ho.

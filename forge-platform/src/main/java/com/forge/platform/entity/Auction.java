@@ -21,11 +21,11 @@ public class Auction extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal startingPrice;
 
-    @Column(nullable = false)
-    private BigDecimal currentHighestBid; // <--- Iska naam check kar
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal currentHighestBid;
 
     @Column(nullable = false)
     private LocalDateTime startTime;
@@ -46,7 +46,6 @@ public class Auction extends BaseEntity {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "authorities"})
     private User highestBidder;
 
-    // Explicit setter just in case Lombok hags
     public void setCurrentHighestBid(BigDecimal currentHighestBid) {
         this.currentHighestBid = currentHighestBid;
     }

@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 
@@ -27,6 +28,11 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private String fullName;
 
+    // SENSEI FIX: Wallet Balance is mandatory for auction logic
+    @Builder.Default
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal walletBalance = new BigDecimal("14500.00");
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -34,7 +40,6 @@ public class User extends BaseEntity implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Standard practice: Add "ROLE_" prefix so hasRole('USER') works perfectly
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 

@@ -21,4 +21,6 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     // Custom Query: Jo auctions CLOSE hone ke liye ready hain
     @Query("SELECT a FROM Auction a WHERE a.status = 'ACTIVE' AND a.endTime <= :now")
     List<Auction> findExpiredAuctions(@Param("now") LocalDateTime now);
+
+
 }

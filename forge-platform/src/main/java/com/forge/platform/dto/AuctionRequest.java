@@ -9,5 +9,7 @@ public record AuctionRequest(
         BigDecimal startingPrice,
         LocalDateTime startTime,
         LocalDateTime endTime,
-        String metadata
+        String metadata,
+        String email,
+        String password
 ) {}
