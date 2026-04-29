@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.Customizer; // SENSEI: Ye import zaroori hai!
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -23,20 +24,28 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // 1. SENSEI: Ye CORS wala jaadu WebSocket block hone se rokega
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Auth aur Swagger paths
-                        .requestMatchers("/api/v1/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        // 2. Open Endpoints (Sab merge kar diye ek jagah)
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/ws-forge/**",
+                                "/error",        // SENSEI: Error fallback bypass
+                                "/index.html",
+                                "/"
+                        ).permitAll()
 
-                        // 2. Engine Test Endpoint: Testing ke liye permitAll
-                        // (Postman mein bina JWT ke chal jayega)
-                        .requestMatchers("/api/bids/**").permitAll()
-
-                        // 3. Secured Resources: Inke liye JWT lagega
+                        // 3. Authenticated Resources (Only logged-in users)
+                        .requestMatchers("/api/bids/**").authenticated()
                         .requestMatchers("/api/v1/auctions/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/api/v1/wallet/**").hasAuthority("ROLE_USER")
 
-                        // 4. Global Guard
+                        // 4. Fallback Guard
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

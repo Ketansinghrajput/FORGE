@@ -1,5 +1,6 @@
 package com.forge.platform.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -10,22 +11,29 @@ import java.time.LocalDateTime;
 @Table(name = "bids")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
-@SuperBuilder // Required because you are using BaseEntity
+@SuperBuilder
 public class Bid extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "auction_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "seller", "highestBidder"})
     private Auction auction;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "bidder_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "authorities", "walletBalance"})
     private User bidder;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
-    private boolean successful;
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean successful = false; // By default bid successful nahi hoti jab tak auction end na ho
 
-    // Isse add karo kyunki service isse use kar rahi hai
-    private LocalDateTime createdAt;
+    // 🚨 SENSEI REALITY CHECK:
+    // Agar tere 'BaseEntity' class mein already 'createdAt' ya 'createdDate' hai,
+    // toh isko yahan se HATA DE, warna JPA confuse ho jayega.
+    // Agar BaseEntity mein nahi hai, toh hi isko rakhna.
+
 }

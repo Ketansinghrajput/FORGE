@@ -13,8 +13,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.security.crypto.password.PasswordEncoder; // ✅ Add this
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.TimeZone;
 
 @SpringBootApplication
@@ -31,33 +33,39 @@ public class ForgePlatformApplication {
     }
 
     @Bean
-    CommandLineRunner initData(UserRepository userRepository, WalletRepository walletRepository) {
+    CommandLineRunner initData(
+            UserRepository userRepository,
+            WalletRepository walletRepository,
+            PasswordEncoder passwordEncoder // 🚀 SENSEI: Inject encoder here
+    ) {
         return args -> {
-            // User 3 check
-            if (!userRepository.existsById(3L)) {
+            String testEmail = "tester@forge.com";
+
+            Optional<User> existingUser = userRepository.findByEmail(testEmail);
+
+            if (existingUser.isEmpty()) {
                 User tester = User.builder()
-                        .id(3L)
-                        .email("tester@forge.com")
+                        .email(testEmail)
                         .fullName("Tester Don")
-                        .password("password123")
+                        // ✅ SENSEI: Password must be encoded before saving to DB
+                        .password(passwordEncoder.encode("password123"))
                         .role(UserRole.USER)
                         .build();
 
-                // Pehle User ko DB mein flush karo 🔑
-                userRepository.saveAndFlush(tester);
+                User savedUser = userRepository.saveAndFlush(tester);
+                System.out.println("✅ USER CREATED: " + savedUser.getEmail() + " with ID: " + savedUser.getId());
 
                 Wallet wallet = Wallet.builder()
-                        .id(3L)
-                        .user(tester)
+                        .user(savedUser)
                         .totalBalance(new BigDecimal("100000"))
                         .lockedAmount(BigDecimal.ZERO)
                         .version(0L)
                         .build();
 
                 walletRepository.saveAndFlush(wallet);
-                System.out.println("✅ SUCCESS: USER 3 & WALLET CREATED BY HIBERNATE!");
+                System.out.println("✅ WALLET CREATED FOR USER ID: " + savedUser.getId());
             } else {
-                System.out.println("ℹ️ INFO: USER 3 ALREADY EXISTS IN DB.");
+                System.out.println("ℹ️ INFO: USER WITH EMAIL " + testEmail + " ALREADY EXISTS. SKIPPING INIT.");
             }
         };
     }

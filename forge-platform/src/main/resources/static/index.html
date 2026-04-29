@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Forge Live Auction</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: white; text-align: center; }
+    .card { background: #1e1e1e; padding: 20px; border-radius: 10px; width: 300px; margin: 50px auto; border: 1px solid #333; }
+    #price { font-size: 2.5em; color: #00ff88; margin: 10px 0; }
+    .bidder { color: #aaa; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Vintage Watch</h2>
+  <p>Auction ID: 1</p>
+  <div id="price">₹ 10,000</div>
+  <p class="bidder">Highest Bidder: <span id="bidderName">None</span></p>
+  <div id="status" style="font-size: 0.8em; color: #555;">Connecting to Forge Engine...</div>
+</div>
+
+<script>
+  var stompClient = null;
+
+  function connect() {
+      var socket = new SockJS('/ws-forge'); // Backend endpoint match karo
+      stompClient = Stomp.over(socket);
+
+      stompClient.connect({}, function (frame) {
+          document.getElementById('status').innerText = "✅ Live Connection Established";
+          console.log('Connected: ' + frame);
+
+          // Topic subscribe karo (Auction ID 1 ke liye)
+          stompClient.subscribe('/topic/auctions/1', function (update) {
+              var data = JSON.parse(update.body);
+              showUpdate(data);
+          });
+      });
+  }
+
+  function showUpdate(data) {
+      document.getElementById('price').innerText = "₹ " + data.newPrice;
+      document.getElementById('bidderName').innerText = data.bidder;
+
+      // Animation effect
+      document.getElementById('price').style.color = "#ffcc00";
+      setTimeout(() => { document.getElementById('price').style.color = "#00ff88"; }, 500);
+  }
+
+  connect();
+</script>
+</body>
+</html>
