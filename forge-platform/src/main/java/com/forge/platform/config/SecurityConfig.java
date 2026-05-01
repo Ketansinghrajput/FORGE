@@ -34,6 +34,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
+                                "/api/v1/engine/**",
                                 "/ws-forge/**",
                                 "/error",        // SENSEI: Error fallback bypass
                                 "/index.html",

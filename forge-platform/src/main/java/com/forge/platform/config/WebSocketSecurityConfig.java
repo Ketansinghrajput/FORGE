@@ -2,7 +2,7 @@ package com.forge.platform.config;
 
 import com.forge.platform.security.JwtService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j; // SENSEI: Logging zaroori hai production debugging ke liye
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -12,7 +12,6 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -37,36 +36,33 @@ public class WebSocketSecurityConfig implements WebSocketMessageBrokerConfigurer
 
                     if (authHeader != null && authHeader.startsWith("Bearer ")) {
                         String token = authHeader.substring(7);
-
-                        // SENSEI: Frontend se string "null" aane ka lafda yahan pakdenge
-                        if (token.equals("null") || token.trim().isEmpty()) {
-                            log.error("🔴 STOMP Auth Failed: Token is literally 'null' or empty");
-                            return message;
-                        }
-
                         try {
                             String userEmail = jwtService.extractUsername(token);
 
-                            if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                            if (userEmail != null) {
                                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
                                 if (jwtService.isTokenValid(token, userDetails)) {
                                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                             userDetails, null, userDetails.getAuthorities());
 
-                                    // Ye line sabse important hai, isi se @AuthenticationPrincipal fill hoga
+                                    // 🚀 SENSEI: Ye line sabse important hai!
+                                    // Isse Spring Message mapping ko pata chalta hai user kaun hai.
                                     accessor.setUser(authToken);
-                                    log.info("🟢 STOMP Auth Success for user: {}", userEmail);
+                                    log.info("🟢 STOMP Auth Success: User [{}] connected", userEmail);
                                 } else {
-                                    log.warn("🔴 STOMP Auth Failed: Token is invalid for user {}", userEmail);
+                                    log.error("🔴 STOMP Auth Failed: Token invalid for user {}", userEmail);
+                                    throw new IllegalArgumentException("Invalid Token"); // Connection reject karne ke liye
                                 }
                             }
                         } catch (Exception e) {
-                            // SENSEI: Ye line exact exception degi (ExpiredJwtException, MalformedJwtException etc)
-                            log.error("🔴 STOMP Token Parsing Error: {}", e.getMessage());
+                            log.error("🔴 STOMP Token Error: {}", e.getMessage());
+                            throw new IllegalArgumentException("Auth Error: " + e.getMessage());
                         }
                     } else {
-                        log.warn("🔴 STOMP Auth Failed: No Bearer token found in headers");
+                        log.warn("🔴 STOMP Auth Failed: Token literally 'null' or empty");
+                        // Authentication fail hone par connection allow nahi karna chahiye
+                        throw new IllegalArgumentException("No Token Found");
                     }
                 }
                 return message;
