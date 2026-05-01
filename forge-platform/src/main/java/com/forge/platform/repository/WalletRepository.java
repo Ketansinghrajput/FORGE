@@ -12,6 +12,7 @@ public interface WalletRepository extends JpaRepository<Wallet, Long> {
 
     // Pichli baar add kiya tha (jab pura User object ho)
     Optional<Wallet> findByUser(User user);
+    Optional<Wallet> findByUserEmail(String email);
 
     // YEH NAYI LINE ADD KAR: Jab sirf userId (number) ho
     Optional<Wallet> findByUserId(Long userId);
