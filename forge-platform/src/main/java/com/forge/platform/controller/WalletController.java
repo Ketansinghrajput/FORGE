@@ -4,8 +4,10 @@ import com.forge.platform.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.math.BigDecimal;
 import java.security.Principal;
@@ -18,15 +20,21 @@ public class WalletController {
 
     private final WalletService walletService;
 
-    // Yahan sirf Logged-In user aa sakta hai, token check hone ke baad
     @GetMapping("/balance")
     public ResponseEntity<Map<String, BigDecimal>> getBalance(Principal principal) {
-        // DRY RUN:
-        // 1. Postman se Request aayi with Bearer Token.
-        // 2. JwtAuthenticationFilter ne token verify kiya aur usme se 'email' nikala.
-        // 3. Filter ne wo email SecurityContext mein daal diya.
-        // 4. 'Principal' usi context se aaya hai. principal.getName() = tera email!
 
         return ResponseEntity.ok(walletService.getMyBalance(principal.getName()));
+    }
+    @PostMapping("/topup")
+    public ResponseEntity<?> topUp(
+            @RequestBody Map<String, BigDecimal> body,
+            Principal principal
+    ) {
+        BigDecimal amount = body.get("amount");
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            return ResponseEntity.badRequest().body("Invalid amount");
+        }
+        walletService.topUpWallet(principal.getName(), amount);
+        return ResponseEntity.ok(Map.of("message", "Wallet topped up successfully", "amount", amount));
     }
 }
