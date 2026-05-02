@@ -60,6 +60,11 @@ public class WalletService {
         }
     }
 
+    public Wallet getWalletByUserId(Long userId) {
+        return walletRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Wallet not found"));
+    }
+
     // Comprehensive Settlement Method for AuctionManager
     @Transactional
     public void settleAuction(User winner, User seller, BigDecimal amount) {
@@ -101,5 +106,16 @@ public class WalletService {
 
         wallet.setTotalBalance(wallet.getTotalBalance().add(amount));
         walletRepository.save(wallet);
+    }
+    @Transactional
+    public void topUpWallet(String email, BigDecimal amount) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+        Wallet wallet = walletRepository.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Wallet not found!"));
+
+        wallet.setTotalBalance(wallet.getTotalBalance().add(amount));
+        walletRepository.save(wallet);
+        log.info("💰 Top-up ₹{} for user {}", amount, email);
     }
 }

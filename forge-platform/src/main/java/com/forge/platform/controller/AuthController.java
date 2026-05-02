@@ -28,4 +28,6 @@ public class AuthController {
         // Service token banayegi aur Controller usko frontend pe bhej dega
         return ResponseEntity.ok(authService.login(request));
     }
+
+
 }

@@ -33,6 +33,9 @@ public class Auction extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime endTime;
 
+    @Column
+    private String imageUrl;
+
     @Enumerated(EnumType.STRING)
     private AuctionStatus status;
 

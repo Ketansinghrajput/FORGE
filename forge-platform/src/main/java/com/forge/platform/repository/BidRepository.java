@@ -18,6 +18,8 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
      */
     List<Bid> findByAuctionIdOrderByAmountDesc(Long auctionId);
 
+    void deleteByAuctionId(Long auctionId);
+
     /**
      * 2. Specific user ki bidding history.
      * Note: 'bidder.id' use hoga kyunki entity mein 'User bidder' relation hai.

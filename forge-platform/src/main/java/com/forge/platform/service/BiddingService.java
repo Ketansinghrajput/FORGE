@@ -5,6 +5,7 @@ import com.forge.platform.entity.*;
 import com.forge.platform.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,8 +90,7 @@ public class BiddingService {
         Bid savedBid = bidRepository.save(bid);
 
         // 8. Live Broadcast
-        broadcastUpdate(auctionId, bidAmount, bidder.getEmail(), auction.getEndTime());
-
+        broadcastUpdate(auctionId, bidAmount, bidder, auction.getEndTime());
         return savedBid;
     }
 
@@ -111,14 +111,18 @@ public class BiddingService {
         }
     }
 
-    private void broadcastUpdate(Long auctionId, BigDecimal amount, String bidderEmail, LocalDateTime newEndTime) {
+    @Autowired
+    private WalletService walletService;
+    private void broadcastUpdate(Long auctionId, BigDecimal amount, User bidder, LocalDateTime newEndTime) {
         String destination = "/topic/auctions/" + auctionId;
+
+        // DTO mein email ki jagah bidder.getFullName() bhejo UI ke liye
         AuctionUpdateDTO payload = AuctionUpdateDTO.builder()
                 .auctionId(auctionId)
                 .newPrice(amount)
-                .bidder(bidderEmail)
-                .endTime(newEndTime.toString()) // UI timer sync ke liye
-                .timestamp(LocalDateTime.now().toString())
+                .bidder(bidder.getEmail())     // Backend tracking ke liye email rehne do
+                .bidderName(bidder.getFullName()) // 👈 UI par "Ketan Singh" dikhane ke liye
+                .availableFunds(walletService.getWalletByUserId(bidder.getId()).getAvailableBalance())                .timestamp(LocalDateTime.now().toString())
                 .build();
 
         messagingTemplate.convertAndSend(destination, payload);

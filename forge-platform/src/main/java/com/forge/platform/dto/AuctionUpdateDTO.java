@@ -19,6 +19,10 @@ public class AuctionUpdateDTO {
     @MaskPII
     private String bidder;
 
+    private BigDecimal availableFunds;
+
+    private String bidderName;
+
     private String endTime; // 🚀 SENSEI FIX: Timer sync ke liye ye field add kar di hai
 
     private String timestamp;

@@ -49,3 +49,26 @@ Phase 5: Production Ready (The "Barclays" Standard)
 • [ ] Load Testing: JMeter se 100+ concurrent users simulate karna.
 • [ ] Dockerization: Pure setup ko docker-compose se ek command pe chalu karna.
 • [ ] Documentation: Ek solid README.md jisme architecture diagrams ho.
+
+
+
+
+{
+  "fullName": "Ketan Singh",
+  "email": "don@forge.com", 
+  "password": "password123"
+}
+
+
+{
+    "email": "tester@forge.com",
+    "password": "password"
+}
+
+
+2
+eyJhbGciOiJIUzM4NCJ9.eyJhdXRob3JpdGllcyI6WyJST0xFX1VTRVIiXSwic3ViIjoidGVzdGVyQGZvcmdlLmNvbSIsImlhdCI6MTc3NzY1NjcwNCwiZXhwIjoxNzc3NzQzMTA0fQ.uQ0TuIS_2AZmAUG_OcvwTdj3ZRsBlPgiaV-_fh0gTEBXH7L1k1uaXyOr5qKniVV2
+
+
+3
+eyJhbGciOiJIUzM4NCJ9.eyJhdXRob3JpdGllcyI6WyJST0xFX1VTRVIiXSwic3ViIjoiZG9uQGZvcmdlLmNvbSIsImlhdCI6MTc3NzY1NjM1MywiZXhwIjoxNzc3NzQyNzUzfQ.TueIEKU8vjCiKGjUPtG11LqDF_5--d2HUVyouJMKJuBKlOnBRSBZrAD3eD1kywT_

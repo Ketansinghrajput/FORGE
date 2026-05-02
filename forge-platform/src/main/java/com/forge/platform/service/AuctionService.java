@@ -5,6 +5,7 @@ import com.forge.platform.entity.Auction;
 import com.forge.platform.entity.User;
 import com.forge.platform.enums.AuctionStatus;
 import com.forge.platform.repository.AuctionRepository;
+import com.forge.platform.repository.BidRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,8 @@ public class AuctionService {
 
     private final AuctionRepository auctionRepository;
     private final WalletService walletService;
+    private final BidRepository bidRepository; // 👈 add karo
+
 
     @Transactional
     public Auction createAuction(AuctionRequest request, User seller) {
@@ -33,6 +36,7 @@ public class AuctionService {
             throw new IllegalArgumentException("End time must be after start time");
         }
 
+
         Auction auction = Auction.builder()
                 .title(request.title())
                 .description(request.description())
@@ -40,6 +44,7 @@ public class AuctionService {
                 .currentHighestBid(request.startingPrice())
                 .startTime(request.startTime())
                 .endTime(request.endTime())
+                .imageUrl(request.imageUrl())
                 .status(AuctionStatus.ACTIVE)
                 .seller(seller)
                 .build();
@@ -113,9 +118,30 @@ public class AuctionService {
         }
     }
 
+    @Transactional
+    public void deleteAuction(Long auctionId, User seller) {
+        Auction auction = auctionRepository.findById(auctionId)
+                .orElseThrow(() -> new RuntimeException("Auction not found"));
+
+        User auctionSeller = auction.getSeller();
+        if (!auctionSeller.getId().equals(seller.getId())) {
+            throw new IllegalArgumentException("Sirf apna auction delete kar sakte ho");
+        }
+
+        // Pehle bids delete karo
+        bidRepository.deleteByAuctionId(auctionId);
+
+        auctionRepository.deleteById(auctionId);
+    }
+
+    @Transactional(readOnly = true)
     public List<Auction> getAllActiveAuctions() {
         return auctionRepository.findAll().stream()
                 .filter(a -> a.getStatus() == AuctionStatus.ACTIVE)
+                .peek(a -> {
+                    if (a.getSeller() != null) a.getSeller().getEmail(); // force initialize
+                    if (a.getHighestBidder() != null) a.getHighestBidder().getEmail(); // force initialize
+                })
                 .toList();
     }
 }

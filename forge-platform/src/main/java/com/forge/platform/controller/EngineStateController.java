@@ -24,20 +24,20 @@ public class EngineStateController {
     private final WalletRepository walletRepository;
 
     @GetMapping("/auction-state/{auctionId}")
-    @Transactional(readOnly = true) // 🚀 SENSEI: Iske bina 500 error aayega (Lazy Loading issue)
-    public ResponseEntity<Map<String, Object>> getInitialState(@PathVariable Long auctionId) {
-
+    @Transactional(readOnly = true)
+    public ResponseEntity<Map<String, Object>> getInitialState(
+            @PathVariable Long auctionId,
+            Principal principal  // logged in user
+    ) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found"));
 
-        // User data nikalne se pehle null check zaroori hai
         String leader = (auction.getHighestBidder() != null)
-                ? auction.getHighestBidder().getEmail()
-                : "No bids yet";
+                ? auction.getHighestBidder().getFullName()
+                : "Waiting for Bids...";
 
-        // Wallet fetch logic (Make sure user fixed hai ya Principal se aa raha hai)
-        // Abhi ke liye tester@forge.com ka wallet fetch kar rahe hain
-        Wallet wallet = walletRepository.findByUserEmail("tester@forge.com")
+        // logged in user ka wallet
+        Wallet wallet = walletRepository.findByUserEmail(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
 
         Map<String, Object> response = new HashMap<>();
@@ -45,6 +45,8 @@ public class EngineStateController {
         response.put("highestBidder", leader);
         response.put("availableFunds", wallet.getTotalBalance());
         response.put("endTime", auction.getEndTime().toString());
+        response.put("title", auction.getTitle());
+        response.put("description", auction.getDescription());
 
         return ResponseEntity.ok(response);
     }
