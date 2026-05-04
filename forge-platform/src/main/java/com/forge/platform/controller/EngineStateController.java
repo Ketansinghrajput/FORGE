@@ -47,6 +47,7 @@ public class EngineStateController {
         response.put("endTime", auction.getEndTime().toString());
         response.put("title", auction.getTitle());
         response.put("description", auction.getDescription());
+        response.put("imageUrl", auction.getImageUrl());
 
         return ResponseEntity.ok(response);
     }

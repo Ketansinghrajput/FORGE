@@ -4,40 +4,47 @@ spring:
   profiles:
     active: dev
 
+  # ✅ DATABASE CONFIG
   datasource:
     url: jdbc:postgresql://localhost:5432/forge_db
     username: postgres
     password: sensei
     driver-class-name: org.postgresql.Driver
 
+  # ✅ JPA / HIBERNATE CONFIG
   jpa:
     hibernate:
-      ddl-auto: update # SENSEI: 'create-drop' se data ud jayega har baar, 'update' use kar for now
+      ddl-auto: update # Data safe rahega, sirf structure update hoga
     show-sql: true
     open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+        # 🔥 SENSEI FIX: DB aur App ka time sync (IST)
+        jdbc:
+          time_zone: Asia/Kolkata
 
+  # ✅ JACKSON SERIALIZATION
   jackson:
     serialization:
       fail-on-empty-beans: false
 
+  # ✅ FLYWAY (Disabled for now as per your setup)
   flyway:
     enabled: false
 
-# ✅ LOGGING CONFIG: Taaki Security aur SQL clear dikhe
+# ✅ LOGGING: Taaki debugging makhan jaisi ho
 logging:
   level:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
-    com.forge.platform: DEBUG
+    com.forge.platform: DEBUG # Tere logs clear dikhenge
 
-# ✅ JWT CONFIG
+# ✅ APPLICATION SECURITY & JWT
 application:
   security:
     jwt:
-      # Minimum 256-bit key (Base64 encoded)
+      # Base64 encoded 256-bit secret key
       secret-key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
       expiration: 86400000 # 24 Hours
