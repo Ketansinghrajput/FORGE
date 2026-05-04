@@ -8,7 +8,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.List;
 
@@ -28,10 +27,8 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private String fullName;
 
-    // SENSEI FIX: Wallet Balance is mandatory for auction logic
-    @Builder.Default
-    @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal walletBalance = new BigDecimal("14500.00");
+    // 🔥 SENSEI FIX: Redundant walletBalance removed.
+    // Data ab sirf 'wallets' table se aayega.
 
     @Builder.Default
     @Enumerated(EnumType.STRING)

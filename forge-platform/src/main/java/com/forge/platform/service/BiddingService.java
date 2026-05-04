@@ -50,21 +50,30 @@ public class BiddingService {
         // 3. Refund & Unlock Logic
         // Agar pehle se koi highest bidder hai aur wo ye khud nahi hai, toh purane wale ka paisa unlock karo
         // BiddingService.java ke andar refund logic update kar:
+        // 3. Refund & Unlock Logic
         if (auction.getHighestBidder() != null && !auction.getHighestBidder().getId().equals(bidder.getId())) {
             User previousBidder = auction.getHighestBidder();
             walletRepository.findByUser(previousBidder).ifPresent(prevWallet -> {
                 log.info("Refunding previous bidder: {}", previousBidder.getEmail());
 
-                // SENSEI FIX: Sirf current auction ka amount subtract kar, ZERO mat kar
                 BigDecimal refundAmount = auction.getCurrentHighestBid();
-                prevWallet.setLockedAmount(prevWallet.getLockedAmount().subtract(refundAmount));
+                BigDecimal newLockedAmount = prevWallet.getLockedAmount().subtract(refundAmount);
 
+                // Prevent negative locked amount
+                if (newLockedAmount.compareTo(BigDecimal.ZERO) < 0) {
+                    newLockedAmount = BigDecimal.ZERO;
+                }
+
+                prevWallet.setLockedAmount(newLockedAmount);
                 walletRepository.save(prevWallet);
             });
         }
 
         // 4. Lock Current Bidder's Money
-        bidderWallet.setLockedAmount(bidAmount);
+        // 4. Lock Current Bidder's Money
+        // SENSEI FIX: Pura lock overide nahi karna hai, purana lock add karo naye bid ke sath
+        BigDecimal currentLocked = bidderWallet.getLockedAmount() != null ? bidderWallet.getLockedAmount() : BigDecimal.ZERO;
+        bidderWallet.setLockedAmount(currentLocked.add(bidAmount));
         walletRepository.save(bidderWallet);
 
         // 5. Smart Auction Extension (Anti-Snipe)

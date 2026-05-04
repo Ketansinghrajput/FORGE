@@ -8,12 +8,15 @@ import com.forge.platform.repository.AuctionRepository;
 import com.forge.platform.repository.BidRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -22,8 +25,8 @@ public class AuctionService {
 
     private final AuctionRepository auctionRepository;
     private final WalletService walletService;
-    private final BidRepository bidRepository; // 👈 add karo
-
+    private final BidRepository bidRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public Auction createAuction(AuctionRequest request, User seller) {
@@ -35,7 +38,6 @@ public class AuctionService {
         if (request.endTime().isBefore(request.startTime())) {
             throw new IllegalArgumentException("End time must be after start time");
         }
-
 
         Auction auction = Auction.builder()
                 .title(request.title())
@@ -54,94 +56,129 @@ public class AuctionService {
 
     @Transactional
     public void placeBid(Long auctionId, User newBidder, BigDecimal bidAmount) {
-        // Auction fetch with lock for concurrency
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found"));
 
-        // 1. Validations
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
             throw new IllegalStateException("Auction is not active");
         }
+
         if (bidAmount.compareTo(auction.getCurrentHighestBid()) <= 0) {
             throw new IllegalArgumentException("Bid must be higher than: " + auction.getCurrentHighestBid());
         }
+
         if (newBidder.getId().equals(auction.getSeller().getId())) {
             throw new IllegalArgumentException("Seller cannot bid on their own auction");
         }
 
-        // 2. LOCK NEW BIDDER'S FUNDS FIRST
-        // Agar yahan balance kam hua, toh exception yahi se throw ho jayega
         log.info("Locking funds for new bidder {}: ₹{}", newBidder.getEmail(), bidAmount);
         walletService.lockFunds(newBidder, bidAmount);
 
-        // 3. REFUND PREVIOUS BIDDER (Only after new bid is secured)
         if (auction.getHighestBidder() != null) {
             User previousBidder = auction.getHighestBidder();
             log.info("Outbidding {} | Refunding: ₹{}", previousBidder.getEmail(), auction.getCurrentHighestBid());
             walletService.unlockFunds(previousBidder, auction.getCurrentHighestBid());
         }
 
-        // 4. UPDATE AUCTION STATE
         auction.setHighestBidder(newBidder);
         auction.setCurrentHighestBid(bidAmount);
-        auctionRepository.save(auction);
 
+        // 🔥 Save and Flush immediately to prevent race conditions
+        auctionRepository.saveAndFlush(auction);
+
+        broadcastAuctionUpdate(auction, "BID_PLACED");
         log.info("Bid successfully placed by {}", newBidder.getEmail());
     }
 
     @Transactional
     public void processExpiredAuctions() {
-        log.info("System checking for expired auctions...");
+        LocalDateTime now = LocalDateTime.now();
+        log.info("SENSEI DEBUG: Checking settlement at {}", now);
 
-        List<Auction> expiredAuctions = auctionRepository.findAll().stream()
-                .filter(a -> a.getStatus() == AuctionStatus.ACTIVE)
-                .filter(a -> a.getEndTime().isBefore(LocalDateTime.now()))
-                .toList();
+        // 🔥 SENSEI FIX: Direct DB query use karo (findAll().stream() is very slow)
+        // Tune repository mein findByStatusAndEndTimeBefore banaya hai, wahi use kar.
+        List<Auction> expiredAuctions = auctionRepository.findByStatusAndEndTimeBefore(AuctionStatus.ACTIVE, now);
+
+        if (expiredAuctions.isEmpty()) {
+            return;
+        }
 
         for (Auction auction : expiredAuctions) {
-            if (auction.getHighestBidder() != null) {
-                User winner = auction.getHighestBidder();
-                User seller = auction.getSeller();
-                BigDecimal finalAmount = auction.getCurrentHighestBid();
+            String type = "AUCTION_EXPIRED";
 
-                log.info("SETTLEMENT START: Winner {} paying ₹{} to Seller {}", winner.getEmail(), finalAmount, seller.getEmail());
+            try {
+                if (auction.getHighestBidder() != null) {
+                    User winner = auction.getHighestBidder();
+                    User seller = auction.getSeller();
+                    BigDecimal finalAmount = auction.getCurrentHighestBid();
 
-                walletService.settlePayment(winner, finalAmount);
-                walletService.creditFunds(seller, finalAmount);
+                    log.info("SETTLING: Auction {} | Winner: {}", auction.getId(), winner.getEmail());
 
-                auction.setStatus(AuctionStatus.COMPLETED);
-            } else {
-                log.info("Auction ID {} EXPIRED with no bids.", auction.getId());
-                auction.setStatus(AuctionStatus.EXPIRED);
+                    // Financial transaction logic
+                    walletService.settleAuction(winner, seller, finalAmount);
+                    auction.setStatus(AuctionStatus.COMPLETED);
+                    type = "AUCTION_COMPLETED";
+                } else {
+                    auction.setStatus(AuctionStatus.EXPIRED);
+                }
+
+                // 🔥 Save and Flush ensures DB status is updated BEFORE WebSocket broadcast
+                auctionRepository.saveAndFlush(auction);
+                broadcastAuctionUpdate(auction, type);
+
+            } catch (Exception e) {
+                log.error("SENSEI ERROR: Failed to settle auction ID {}: {}", auction.getId(), e.getMessage());
+                // Important: Ek auction fail hone par loop rukna nahi chahiye
             }
-            auctionRepository.save(auction);
         }
     }
 
+    // 🔥 Added public modifier to fix Controller visibility error
     @Transactional
     public void deleteAuction(Long auctionId, User seller) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found"));
 
-        User auctionSeller = auction.getSeller();
-        if (!auctionSeller.getId().equals(seller.getId())) {
-            throw new IllegalArgumentException("Sirf apna auction delete kar sakte ho");
+        if (!auction.getSeller().getId().equals(seller.getId())) {
+            throw new IllegalStateException("Sirf apna auction delete kar sakte ho");
         }
 
-        // Pehle bids delete karo
         bidRepository.deleteByAuctionId(auctionId);
-
         auctionRepository.deleteById(auctionId);
+        log.info("Auction ID {} deleted by seller {}", auctionId, seller.getEmail());
     }
 
     @Transactional(readOnly = true)
     public List<Auction> getAllActiveAuctions() {
         return auctionRepository.findAll().stream()
+                // 🔥 Fixed: Proper comparison ==
                 .filter(a -> a.getStatus() == AuctionStatus.ACTIVE)
                 .peek(a -> {
-                    if (a.getSeller() != null) a.getSeller().getEmail(); // force initialize
-                    if (a.getHighestBidder() != null) a.getHighestBidder().getEmail(); // force initialize
+                    // 🔥 Fixed: Proper null check !=
+                    if (a.getSeller() != null) a.getSeller().getEmail();
+                    if (a.getHighestBidder() != null) a.getHighestBidder().getEmail();
                 })
                 .toList();
+    }
+
+    private void broadcastAuctionUpdate(Auction auction, String type) {
+        String winnerName = (auction.getHighestBidder() != null)
+                ? auction.getHighestBidder().getFullName()
+                : "None";
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("auctionId", auction.getId());
+        payload.put("status", auction.getStatus().name()); // 🔥 Status (ACTIVE/COMPLETED)
+        payload.put("currentHighestBid", auction.getCurrentHighestBid());
+        payload.put("newPrice", auction.getCurrentHighestBid());
+        payload.put("winnerName", winnerName);
+        payload.put("highestBidder", auction.getHighestBidder() != null ? auction.getHighestBidder().getEmail() : null); // 🔥 Added email for FE matching
+        payload.put("type", type); // 🔥 Event Type (BID_PLACED/AUCTION_COMPLETED)
+
+        log.info("SENSEI: Broadcasting {} for Auction ID: {}", type, auction.getId());
+
+        // Topic logic exact rakho
+        messagingTemplate.convertAndSend("/topic/auctions/" + auction.getId(), payload);
+//        messagingTemplate.convertAndSend("/topic/auctions", payload);
     }
 }

@@ -6,6 +6,7 @@ import com.forge.platform.repository.UserRepository;
 import com.forge.platform.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate; // 🔥 For instant UI update
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,103 +20,103 @@ public class WalletService {
 
     private final UserRepository userRepository;
     private final WalletRepository walletRepository;
+    private final SimpMessagingTemplate messagingTemplate; // 🔥 Sensei Fix
 
     @Transactional(readOnly = true)
     public Map<String, BigDecimal> getMyBalance(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found!"));
         Wallet wallet = walletRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Wallet not found for user!"));
-        return Map.of(
-                "totalBalance", wallet.getTotalBalance(),
-                "lockedAmount", wallet.getLockedAmount()
-        );
+                .orElseThrow(() -> new RuntimeException("Wallet not found!"));
+
+        // Frontend expects 'walletBalance' or 'balance' key based on your DTO
+        return Map.of("balance", wallet.getAvailableBalance());
+    }
+
+    @Transactional
+    public void topUpWallet(String email, BigDecimal amount) {
+        log.info("💰 Processing top-up of ₹{} for {}", amount, email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found!"));
+
+        // 🔥 SENSEI FIX: Use Pessimistic Lock taaki balance update safe rahe
+        Wallet wallet = walletRepository.findByUserWithLock(user)
+                .orElseThrow(() -> new RuntimeException("Wallet not found!"));
+
+        wallet.setTotalBalance(wallet.getTotalBalance().add(amount));
+        walletRepository.save(wallet);
+
+        // 🔥 SENSEI MAGIC: Push update to WebSocket
+        // Isse Navbar ka BehaviorSubject instantly update ho jayega!
+        broadcastBalanceUpdate(email, wallet.getAvailableBalance());
+
+        log.info("✅ Top-up successful. New Balance: ₹{}", wallet.getAvailableBalance());
     }
 
     @Transactional
     public void lockFunds(User user, BigDecimal amount) {
-        Wallet wallet = walletRepository.findByUser(user)
+        // Lock with Write access to prevent concurrent bidding issues
+        Wallet wallet = walletRepository.findByUserWithLock(user)
                 .orElseThrow(() -> new RuntimeException("Wallet not found!"));
 
-        BigDecimal availableBalance = wallet.getTotalBalance().subtract(wallet.getLockedAmount());
-
-        if (availableBalance.compareTo(amount) < 0) {
+        if (wallet.getAvailableBalance().compareTo(amount) < 0) {
             throw new IllegalStateException("Insufficient funds to place this bid!");
         }
 
         wallet.setLockedAmount(wallet.getLockedAmount().add(amount));
         walletRepository.save(wallet);
+
+        broadcastBalanceUpdate(user.getEmail(), wallet.getAvailableBalance());
         log.info("🔒 Locked ₹{} for user {}", amount, user.getEmail());
     }
 
     @Transactional
     public void unlockFunds(User user, BigDecimal amount) {
-        Wallet wallet = walletRepository.findByUser(user)
+        Wallet wallet = walletRepository.findByUserWithLock(user)
                 .orElseThrow(() -> new RuntimeException("Wallet not found!"));
 
-        if (wallet.getLockedAmount().compareTo(amount) >= 0) {
-            wallet.setLockedAmount(wallet.getLockedAmount().subtract(amount));
-            walletRepository.save(wallet);
-            log.info("🔓 Unlocked ₹{} for user {}", amount, user.getEmail());
+        BigDecimal newLockedAmount = wallet.getLockedAmount().subtract(amount);
+        if (newLockedAmount.compareTo(BigDecimal.ZERO) < 0) {
+            newLockedAmount = BigDecimal.ZERO; // Safety check
         }
+
+        wallet.setLockedAmount(newLockedAmount);
+        walletRepository.save(wallet);
+
+        broadcastBalanceUpdate(user.getEmail(), wallet.getAvailableBalance());
+        log.info("🔓 Unlocked ₹{} for user {}", amount, user.getEmail());
+    }
+
+    @Transactional
+    public void settleAuction(User winner, User seller, BigDecimal amount) {
+        log.info("💸 Settling Auction: {} -> {} | ₹{}", winner.getEmail(), seller.getEmail(), amount);
+
+        // 1. Deduct from Winner
+        Wallet winnerWallet = walletRepository.findByUserWithLock(winner).orElseThrow();
+        winnerWallet.setTotalBalance(winnerWallet.getTotalBalance().subtract(amount));
+        winnerWallet.setLockedAmount(winnerWallet.getLockedAmount().subtract(amount));
+        walletRepository.save(winnerWallet);
+        broadcastBalanceUpdate(winner.getEmail(), winnerWallet.getAvailableBalance());
+
+        // 2. Credit to Seller
+        Wallet sellerWallet = walletRepository.findByUserWithLock(seller).orElseThrow();
+        sellerWallet.setTotalBalance(sellerWallet.getTotalBalance().add(amount));
+        walletRepository.save(sellerWallet);
+        broadcastBalanceUpdate(seller.getEmail(), sellerWallet.getAvailableBalance());
+    }
+
+    // Common method to notify Frontend via WebSocket
+    private void broadcastBalanceUpdate(String email, BigDecimal newBalance) {
+        Map<String, Object> payload = Map.of(
+                "walletBalance", newBalance,
+                "type", "BALANCE_UPDATE"
+        );
+        messagingTemplate.convertAndSendToUser(email, "/queue/wallet", payload);
     }
 
     public Wallet getWalletByUserId(Long userId) {
         return walletRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
-    }
-
-    // Comprehensive Settlement Method for AuctionManager
-    @Transactional
-    public void settleAuction(User winner, User seller, BigDecimal amount) {
-        log.info("💸 Starting Settlement: Winner({}) -> Seller({}) | Amount: ₹{}",
-                winner.getEmail(), seller.getEmail(), amount);
-
-        // 1. Deduct from Winner (Total and Locked)
-        Wallet winnerWallet = walletRepository.findByUser(winner)
-                .orElseThrow(() -> new RuntimeException("Winner wallet missing"));
-
-        winnerWallet.setTotalBalance(winnerWallet.getTotalBalance().subtract(amount));
-        winnerWallet.setLockedAmount(winnerWallet.getLockedAmount().subtract(amount));
-        walletRepository.save(winnerWallet);
-
-        // 2. Credit to Seller
-        Wallet sellerWallet = walletRepository.findByUser(seller)
-                .orElseThrow(() -> new RuntimeException("Seller wallet missing"));
-
-        sellerWallet.setTotalBalance(sellerWallet.getTotalBalance().add(amount));
-        walletRepository.save(sellerWallet);
-
-        log.info("✅ Settlement successful for amount ₹{}", amount);
-    }
-    @Transactional
-    public void settlePayment(User user, BigDecimal amount) {
-        Wallet wallet = walletRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Wallet not found!"));
-
-        // Total balance aur locked dono kam honge winner ke liye
-        wallet.setTotalBalance(wallet.getTotalBalance().subtract(amount));
-        wallet.setLockedAmount(wallet.getLockedAmount().subtract(amount));
-        walletRepository.save(wallet);
-    }
-
-    @Transactional
-    public void creditFunds(User user, BigDecimal amount) {
-        Wallet wallet = walletRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Wallet not found!"));
-
-        wallet.setTotalBalance(wallet.getTotalBalance().add(amount));
-        walletRepository.save(wallet);
-    }
-    @Transactional
-    public void topUpWallet(String email, BigDecimal amount) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found!"));
-        Wallet wallet = walletRepository.findByUser(user)
-                .orElseThrow(() -> new RuntimeException("Wallet not found!"));
-
-        wallet.setTotalBalance(wallet.getTotalBalance().add(amount));
-        walletRepository.save(wallet);
-        log.info("💰 Top-up ₹{} for user {}", amount, email);
     }
 }

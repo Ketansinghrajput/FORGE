@@ -14,7 +14,7 @@ public class AuctionScheduler {
     private final AuctionManagerService auctionManager;
 
     // Har 1 minute mein check karega
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 10000)
     public void processAuctionTransitions() {
         log.info("⏰ Running Auction Lifecycle Scheduler...");
 
