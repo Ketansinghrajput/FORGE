@@ -27,7 +27,7 @@ public class EngineStateController {
     @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getInitialState(
             @PathVariable Long auctionId,
-            Principal principal  // logged in user
+            Principal principal
     ) {
         Auction auction = auctionRepository.findById(auctionId)
                 .orElseThrow(() -> new RuntimeException("Auction not found"));
@@ -36,18 +36,27 @@ public class EngineStateController {
                 ? auction.getHighestBidder().getFullName()
                 : "Waiting for Bids...";
 
-        // logged in user ka wallet
         Wallet wallet = walletRepository.findByUserEmail(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
+
+        // ✅ Derive effective status — don't trust DB blindly if time has passed
+        String effectiveStatus = auction.getStatus().name();
+        if (effectiveStatus.equals("ACTIVE") && auction.getEndTime().isBefore(java.time.LocalDateTime.now())) {
+            effectiveStatus = "COMPLETED"; // scheduler hasn't caught up yet, but time is up
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("currentBid", auction.getCurrentHighestBid() != null ? auction.getCurrentHighestBid() : auction.getStartingPrice());
         response.put("highestBidder", leader);
         response.put("availableFunds", wallet.getTotalBalance());
-        response.put("endTime", auction.getEndTime().toString());
+        // ✅ Correct fix
+        response.put("endTime", auction.getEndTime()
+                .atZone(java.time.ZoneId.of("Asia/Kolkata"))
+                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         response.put("title", auction.getTitle());
         response.put("description", auction.getDescription());
         response.put("imageUrl", auction.getImageUrl());
+        response.put("status", effectiveStatus); // ✅ now always accurate
 
         return ResponseEntity.ok(response);
     }

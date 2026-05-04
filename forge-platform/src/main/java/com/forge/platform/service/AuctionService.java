@@ -163,22 +163,33 @@ public class AuctionService {
 
     private void broadcastAuctionUpdate(Auction auction, String type) {
         String winnerName = (auction.getHighestBidder() != null)
-                ? auction.getHighestBidder().getFullName()
-                : "None";
+                ? auction.getHighestBidder().getFullName() : "None";
+
+        // Get winner's balance
+        BigDecimal availableFunds = BigDecimal.ZERO;
+        if (auction.getHighestBidder() != null) {
+            try {
+                availableFunds = walletService.getWalletByUserId(
+                        auction.getHighestBidder().getId()
+                ).getAvailableBalance();
+            } catch (Exception e) {
+                log.warn("Could not fetch wallet balance for broadcast");
+            }
+        }
 
         Map<String, Object> payload = new HashMap<>();
         payload.put("auctionId", auction.getId());
-        payload.put("status", auction.getStatus().name()); // 🔥 Status (ACTIVE/COMPLETED)
+        payload.put("status", auction.getStatus().name());
         payload.put("currentHighestBid", auction.getCurrentHighestBid());
         payload.put("newPrice", auction.getCurrentHighestBid());
         payload.put("winnerName", winnerName);
-        payload.put("highestBidder", auction.getHighestBidder() != null ? auction.getHighestBidder().getEmail() : null); // 🔥 Added email for FE matching
-        payload.put("type", type); // 🔥 Event Type (BID_PLACED/AUCTION_COMPLETED)
+        payload.put("highestBidder", auction.getHighestBidder() != null
+                ? auction.getHighestBidder().getEmail() : null);
+        payload.put("type", type);
+        payload.put("availableFunds", availableFunds);
+        payload.put("highestBidderEmail", auction.getHighestBidder() != null
+                ? auction.getHighestBidder().getEmail() : null); // ✅ explicit email field
 
-        log.info("SENSEI: Broadcasting {} for Auction ID: {}", type, auction.getId());
-
-        // Topic logic exact rakho
         messagingTemplate.convertAndSend("/topic/auctions/" + auction.getId(), payload);
-//        messagingTemplate.convertAndSend("/topic/auctions", payload);
     }
 }
