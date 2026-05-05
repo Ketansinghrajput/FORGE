@@ -80,7 +80,7 @@ public class ApplicationConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() { // ✅ Yahan rehne do
+    public PasswordEncoder passwordEncoder() { //   Yahan rehne do
         return new BCryptPasswordEncoder();
     }
 

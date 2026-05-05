@@ -30,7 +30,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
 
-        // ✅ Source of Truth: Naya wallet reset state mein
+        //   Source of Truth: Naya wallet reset state mein
         Wallet wallet = Wallet.builder()
                 .user(savedUser)
                 .totalBalance(BigDecimal.ZERO)

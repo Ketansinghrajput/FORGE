@@ -78,10 +78,10 @@ public class BiddingService {
 
         // 5. Smart Auction Extension (Anti-Snipe)
         // Agar auction khatam hone mein < 1 minute bacha hai, 5 min badha do
-        if (auction.getEndTime().minusMinutes(1).isBefore(LocalDateTime.now())) {
-            auction.setEndTime(auction.getEndTime().plusMinutes(5));
-            log.info("Auction extended due to last minute bid by {}", bidder.getEmail());
-        }
+//        if (auction.getEndTime().minusMinutes(1).isBefore(LocalDateTime.now())) {
+//            auction.setEndTime(auction.getEndTime().plusMinutes(5));
+//            log.info("Auction extended due to last minute bid by {}", bidder.getEmail());
+//        }
 
         // 6. Update Auction State
         auction.setCurrentHighestBid(bidAmount);
@@ -125,15 +125,19 @@ public class BiddingService {
     private void broadcastUpdate(Long auctionId, BigDecimal amount, User bidder, LocalDateTime newEndTime) {
         String destination = "/topic/auctions/" + auctionId;
 
-        // DTO mein email ki jagah bidder.getFullName() bhejo UI ke liye
         AuctionUpdateDTO payload = AuctionUpdateDTO.builder()
                 .auctionId(auctionId)
                 .newPrice(amount)
-                .bidder(bidder.getEmail())     // Backend tracking ke liye email rehne do
-                .bidderName(bidder.getFullName()) // 👈 UI par "Ketan Singh" dikhane ke liye
-                .availableFunds(walletService.getWalletByUserId(bidder.getId()).getAvailableBalance())                .timestamp(LocalDateTime.now().toString())
+                .bidder(bidder.getEmail())
+                .bidderName(bidder.getFullName())
+                .availableFunds(walletService.getWalletByUserId(bidder.getId()).getAvailableBalance())
+                .endTime(newEndTime != null ? newEndTime
+                        .atZone(java.time.ZoneId.of("Asia/Kolkata"))
+                        .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null) //   THIS WAS MISSING
+                .timestamp(LocalDateTime.now().toString())
                 .build();
 
         messagingTemplate.convertAndSend(destination, payload);
+        System.out.println("✅ Broadcast Fired to Frontend: " + payload);
     }
 }

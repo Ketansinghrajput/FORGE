@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.security.crypto.password.PasswordEncoder; // ✅ Add this
+import org.springframework.security.crypto.password.PasswordEncoder; //   Add this
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -47,7 +47,7 @@ public class ForgePlatformApplication {
                 User tester = User.builder()
                         .email(testEmail)
                         .fullName("Tester Don")
-                        // ✅ SENSEI: Password must be encoded before saving to DB
+                        //  SENSEI: Password must be encoded before saving to DB
                         .password(passwordEncoder.encode("password123"))
                         .role(UserRole.USER)
                         .build();

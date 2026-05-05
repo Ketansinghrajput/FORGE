@@ -34,16 +34,15 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDto> getProfile(@AuthenticationPrincipal User user) {
-        // 🔥 SENSEI FIX: Wallet table se live balance uthao, User entity se nahi!
         BigDecimal liveBalance = walletRepository.findByUser(user)
-                .map(Wallet::getTotalBalance)
+                .map(Wallet::getAvailableBalance) //   totalBalance - lockedAmount
                 .orElse(BigDecimal.ZERO);
 
         return ResponseEntity.ok(new UserResponseDto(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
-                liveBalance, // 👈 Passing live balance
+                liveBalance,
                 user.getCreatedAt()
         ));
     }

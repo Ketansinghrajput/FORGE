@@ -92,18 +92,26 @@ public class WalletService {
     public void settleAuction(User winner, User seller, BigDecimal amount) {
         log.info("💸 Settling Auction: {} -> {} | ₹{}", winner.getEmail(), seller.getEmail(), amount);
 
-        // 1. Deduct from Winner
+        // 1. Deduct from Winner — clear both total and locked
         Wallet winnerWallet = walletRepository.findByUserWithLock(winner).orElseThrow();
+
+        //   Subtract from total balance
         winnerWallet.setTotalBalance(winnerWallet.getTotalBalance().subtract(amount));
-        winnerWallet.setLockedAmount(winnerWallet.getLockedAmount().subtract(amount));
+
+        //   Clear locked amount safely — don't assume exact locked value
+        BigDecimal newLocked = winnerWallet.getLockedAmount().subtract(amount);
+        winnerWallet.setLockedAmount(newLocked.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newLocked);
+
         walletRepository.save(winnerWallet);
         broadcastBalanceUpdate(winner.getEmail(), winnerWallet.getAvailableBalance());
+        log.info("✅ Winner {} debited ₹{} | New balance: ₹{}", winner.getEmail(), amount, winnerWallet.getAvailableBalance());
 
         // 2. Credit to Seller
         Wallet sellerWallet = walletRepository.findByUserWithLock(seller).orElseThrow();
         sellerWallet.setTotalBalance(sellerWallet.getTotalBalance().add(amount));
         walletRepository.save(sellerWallet);
         broadcastBalanceUpdate(seller.getEmail(), sellerWallet.getAvailableBalance());
+        log.info("✅ Seller {} credited ₹{} | New balance: ₹{}", seller.getEmail(), amount, sellerWallet.getAvailableBalance());
     }
 
     // Common method to notify Frontend via WebSocket

@@ -23,11 +23,11 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
     @Query("SELECT a FROM Auction a WHERE a.status = 'ACTIVE' AND a.endTime <= :now")
     List<Auction> findExpiredAuctions(@Param("now") LocalDateTime now);
 
-    // ✅ Enum based query: 'PLANNED' string ki jagah Enum use karna better hai
+    //   Enum based query: 'PLANNED' string ki jagah Enum use karna better hai
     @Query("SELECT a FROM Auction a WHERE a.status = :status AND a.startTime <= :now")
     List<Auction> findByStatusAndStartTimeBefore(@Param("status") AuctionStatus status, @Param("now") LocalDateTime now);
 
-    // ✅ Optimized Expired Query: Seedha status aur time check
+    //   Optimized Expired Query: Seedha status aur time check
     @Query("SELECT a FROM Auction a WHERE a.status = :status AND a.endTime <= :now")
     List<Auction> findByStatusAndEndTimeBefore(@Param("status") AuctionStatus status, @Param("now") LocalDateTime now);
 }
