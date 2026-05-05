@@ -39,7 +39,7 @@ public class EngineStateController {
         Wallet wallet = walletRepository.findByUserEmail(principal.getName())
                 .orElseThrow(() -> new RuntimeException("Wallet not found"));
 
-        // ✅ Derive effective status — don't trust DB blindly if time has passed
+        //   Derive effective status — don't trust DB blindly if time has passed
         String effectiveStatus = auction.getStatus().name();
         if (effectiveStatus.equals("ACTIVE") && auction.getEndTime().isBefore(java.time.LocalDateTime.now())) {
             effectiveStatus = "COMPLETED"; // scheduler hasn't caught up yet, but time is up
@@ -49,14 +49,17 @@ public class EngineStateController {
         response.put("currentBid", auction.getCurrentHighestBid() != null ? auction.getCurrentHighestBid() : auction.getStartingPrice());
         response.put("highestBidder", leader);
         response.put("availableFunds", wallet.getTotalBalance());
-        // ✅ Correct fix
+        response.put("startTime", auction.getStartTime()
+                .atZone(java.time.ZoneId.of("Asia/Kolkata"))
+                .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         response.put("endTime", auction.getEndTime()
                 .atZone(java.time.ZoneId.of("Asia/Kolkata"))
                 .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME));
         response.put("title", auction.getTitle());
         response.put("description", auction.getDescription());
         response.put("imageUrl", auction.getImageUrl());
-        response.put("status", effectiveStatus); // ✅ now always accurate
+        response.put("status", effectiveStatus); //
+
 
         return ResponseEntity.ok(response);
     }

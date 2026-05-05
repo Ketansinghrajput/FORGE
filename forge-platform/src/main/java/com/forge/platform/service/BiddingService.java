@@ -133,7 +133,7 @@ public class BiddingService {
                 .availableFunds(walletService.getWalletByUserId(bidder.getId()).getAvailableBalance())
                 .endTime(newEndTime != null ? newEndTime
                         .atZone(java.time.ZoneId.of("Asia/Kolkata"))
-                        .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null) // ✅ THIS WAS MISSING
+                        .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null) //   THIS WAS MISSING
                 .timestamp(LocalDateTime.now().toString())
                 .build();
 

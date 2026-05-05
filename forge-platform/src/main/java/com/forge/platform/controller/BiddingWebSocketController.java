@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class BiddingWebSocketController {
 
-    private final AuctionService auctionService; // ✅ Use AuctionService, not BiddingService
+    private final AuctionService auctionService; //   Use AuctionService, not BiddingService
     private final UserRepository userRepository;
 
     @MessageMapping("/bid")
@@ -28,7 +28,7 @@ public class BiddingWebSocketController {
         User bidder = userRepository.findByEmail(email).orElseThrow();
 
         try {
-            // ✅ AuctionService.placeBid handles locking, refunds, broadcast — everything
+            //   AuctionService.placeBid handles locking, refunds, broadcast — everything
             auctionService.placeBid(request.getAuctionId(), bidder, request.getBidAmount());
 
         } catch (Exception e) {

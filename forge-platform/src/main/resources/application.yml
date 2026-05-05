@@ -4,14 +4,14 @@ spring:
   profiles:
     active: dev
 
-  # ✅ DATABASE CONFIG
+  #   DATABASE CONFIG
   datasource:
     url: jdbc:postgresql://localhost:5432/forge_db
     username: postgres
     password: sensei
     driver-class-name: org.postgresql.Driver
 
-  # ✅ JPA / HIBERNATE CONFIG
+  #   JPA / HIBERNATE CONFIG
   jpa:
     hibernate:
       ddl-auto: update # Data safe rahega, sirf structure update hoga
@@ -25,23 +25,23 @@ spring:
         jdbc:
           time_zone: Asia/Kolkata
 
-  # ✅ JACKSON SERIALIZATION
+  #   JACKSON SERIALIZATION
   jackson:
     serialization:
       fail-on-empty-beans: false
 
-  # ✅ FLYWAY (Disabled for now as per your setup)
+  #   FLYWAY (Disabled for now as per your setup)
   flyway:
     enabled: false
 
-# ✅ LOGGING: Taaki debugging makhan jaisi ho
+#   LOGGING: Taaki debugging makhan jaisi ho
 logging:
   level:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     com.forge.platform: DEBUG # Tere logs clear dikhenge
 
-# ✅ APPLICATION SECURITY & JWT
+#   APPLICATION SECURITY & JWT
 application:
   security:
     jwt:

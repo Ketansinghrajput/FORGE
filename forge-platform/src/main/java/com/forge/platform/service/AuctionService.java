@@ -2,6 +2,7 @@ package com.forge.platform.service;
 
 import com.forge.platform.dto.AuctionRequest;
 import com.forge.platform.entity.Auction;
+import com.forge.platform.entity.Bid;
 import com.forge.platform.entity.User;
 import com.forge.platform.enums.AuctionStatus;
 import com.forge.platform.repository.AuctionRepository;
@@ -86,6 +87,17 @@ public class AuctionService {
         // 🔥 Save and Flush immediately to prevent race conditions
         auctionRepository.saveAndFlush(auction);
 
+        Bid bid = Bid.builder()
+                .auction(auction)
+                .bidder(newBidder)
+                .amount(bidAmount)
+                .successful(false)
+                .build();
+        bidRepository.save(bid);
+
+        broadcastAuctionUpdate(auction, "BID_PLACED");
+        log.info("Bid successfully placed by {}", newBidder.getEmail());
+
         broadcastAuctionUpdate(auction, "BID_PLACED");
         log.info("Bid successfully placed by {}", newBidder.getEmail());
     }
@@ -118,6 +130,11 @@ public class AuctionService {
                     walletService.settleAuction(winner, seller, finalAmount);
                     auction.setStatus(AuctionStatus.COMPLETED);
                     type = "AUCTION_COMPLETED";
+                    bidRepository.findHighestBidForAuction(auction.getId())
+                            .ifPresent(winningBid -> {
+                                winningBid.setSuccessful(true);
+                                bidRepository.save(winningBid);
+                            });
                 } else {
                     auction.setStatus(AuctionStatus.EXPIRED);
                 }
@@ -188,7 +205,7 @@ public class AuctionService {
         payload.put("type", type);
         payload.put("availableFunds", availableFunds);
         payload.put("highestBidderEmail", auction.getHighestBidder() != null
-                ? auction.getHighestBidder().getEmail() : null); // ✅ explicit email field
+                ? auction.getHighestBidder().getEmail() : null); //   explicit email field
 
         messagingTemplate.convertAndSend("/topic/auctions/" + auction.getId(), payload);
     }

@@ -35,7 +35,7 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserResponseDto> getProfile(@AuthenticationPrincipal User user) {
         BigDecimal liveBalance = walletRepository.findByUser(user)
-                .map(Wallet::getAvailableBalance) // ✅ totalBalance - lockedAmount
+                .map(Wallet::getAvailableBalance) //   totalBalance - lockedAmount
                 .orElse(BigDecimal.ZERO);
 
         return ResponseEntity.ok(new UserResponseDto(

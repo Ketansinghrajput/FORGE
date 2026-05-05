@@ -95,10 +95,10 @@ public class WalletService {
         // 1. Deduct from Winner — clear both total and locked
         Wallet winnerWallet = walletRepository.findByUserWithLock(winner).orElseThrow();
 
-        // ✅ Subtract from total balance
+        //   Subtract from total balance
         winnerWallet.setTotalBalance(winnerWallet.getTotalBalance().subtract(amount));
 
-        // ✅ Clear locked amount safely — don't assume exact locked value
+        //   Clear locked amount safely — don't assume exact locked value
         BigDecimal newLocked = winnerWallet.getLockedAmount().subtract(amount);
         winnerWallet.setLockedAmount(newLocked.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newLocked);
 
