@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="./assets/FORGE.jpeg" width="200" alt="FORGE Logo"/>
-</p>
-
 # FORGE — Real-Time Auction & Commerce Engine
 
 > A high-performance concurrent bidding engine wrapped in a production-grade enterprise platform.
