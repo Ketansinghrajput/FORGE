@@ -88,4 +88,9 @@ public class BiddingEngine {
             log.info("Auction {} ended and removed from Engine Memory.", auctionId);
         }
     }
+    public Bid getWinningBid(Long auctionId) {
+        AuctionContext context = activeAuctions.get(auctionId);
+        if (context == null) return null;
+        return context.getBidBook().getBestBid();
+    }
 }

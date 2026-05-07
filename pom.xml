@@ -19,7 +19,6 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
         <spring-boot.version>3.2.5</spring-boot.version>
     </properties>
 
@@ -44,9 +43,21 @@
                     <version>3.13.0</version>
                     <configuration>
                         <release>21</release>
-                        <parameters>true</parameters> </configuration>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>0.8.12</version>
                 </plugin>
             </plugins>
         </pluginManagement>
     </build>
+
 </project>
