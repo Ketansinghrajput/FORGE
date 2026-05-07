@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="WhatsApp Image 2026-05-08 at 1.00.34 AM" width="200" alt="FORGE Logo"/>
+  <img src="FORGE" width="200" alt="FORGE Logo"/>
 </p>
 
 # FORGE — Real-Time Auction & Commerce Engine
