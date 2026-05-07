@@ -10,10 +10,11 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile; // 🔥 Imported Profile
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.security.crypto.password.PasswordEncoder; //   Add this
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -33,10 +34,11 @@ public class ForgePlatformApplication {
     }
 
     @Bean
+    @Profile("!test") // 🔥 SENSEI FIX: Yeh line Spring ko rokegi test me data daalne se!
     CommandLineRunner initData(
             UserRepository userRepository,
             WalletRepository walletRepository,
-            PasswordEncoder passwordEncoder // 🚀 SENSEI: Inject encoder here
+            PasswordEncoder passwordEncoder
     ) {
         return args -> {
             String testEmail = "tester@forge.com";
@@ -47,7 +49,6 @@ public class ForgePlatformApplication {
                 User tester = User.builder()
                         .email(testEmail)
                         .fullName("Tester Don")
-                        //  SENSEI: Password must be encoded before saving to DB
                         .password(passwordEncoder.encode("password123"))
                         .role(UserRole.USER)
                         .build();

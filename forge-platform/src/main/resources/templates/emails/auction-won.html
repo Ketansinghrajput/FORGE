@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body style="background-color: #1a1510; color: #f5f5f5; font-family: serif; padding: 20px;">
+<h2 style="color: #d4af37;">— ★ PRIME LOT WON ★ —</h2>
+<p>Congratulations, Sensei! You have successfully won the auction for:</p>
+<h1 th:text="${title}">Item Title</h1>
+<p>Final Bid Amount: <strong style="color: #d4af37;">₹<span th:text="${amount}">0</span></strong></p>
+<p>Please complete the payment in your dashboard.</p>
+</body>
+</html>

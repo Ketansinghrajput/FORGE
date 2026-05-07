@@ -66,9 +66,36 @@ Phase 5: Production Ready (The "Barclays" Standard)
 }
 
 
-2
-eyJhbGciOiJIUzM4NCJ9.eyJhdXRob3JpdGllcyI6WyJST0xFX1VTRVIiXSwic3ViIjoidGVzdGVyQGZvcmdlLmNvbSIsImlhdCI6MTc3NzY1NjcwNCwiZXhwIjoxNzc3NzQzMTA0fQ.uQ0TuIS_2AZmAUG_OcvwTdj3ZRsBlPgiaV-_fh0gTEBXH7L1k1uaXyOr5qKniVV2
+
+PS C:\WINDOWS\System32> cd G:\Redemption\EXECUTION\FORGE
+PS G:\Redemption\EXECUTION\FORGE> Get-ChildItem -Recurse -Filter "*.java" | Select-Object FullName
 
 
-3
-eyJhbGciOiJIUzM4NCJ9.eyJhdXRob3JpdGllcyI6WyJST0xFX1VTRVIiXSwic3ViIjoiZG9uQGZvcmdlLmNvbSIsImlhdCI6MTc3NzY1NjM1MywiZXhwIjoxNzc3NzQyNzUzfQ.TueIEKU8vjCiKGjUPtG11LqDF_5--d2HUVyouJMKJuBKlOnBRSBZrAD3eD1kywT_
+
+
+Jeet gaye Sensei! 🎉 Pehla aur sabse bada hurdle paar ho gaya. Agar tum dhyan se dekho toh `Controller -> Repository` wale rule ka violation ab **0** hai. Woh gayab ho gaya! 
+
+Ab aate hain in baaki **30 violations** par. Dhyan se suno, market reality bata raha hu. Ye violations code ki kharabi nahi hai, balki tumhara **ArchUnit ka rule thoda zyada hi strict (textbook) ho gaya hai**.
+
+### Issue kya hai? (Dry Run)
+Tumhare ArchUnit ka rule keh raha hai:
+1. `Repository` ko **SIRF** `Service` touch karegi.
+2. `Service` ko **SIRF** `Controller` touch karega.
+
+**Lekin Spring Boot ki reality alag hoti hai:**
+* **Schedulers (`..scheduler..`)**: Inko background jobs chalane ke liye `Service` ko call karna hi padta hai.
+* **Configs & Initializers (`..config..` / `ForgePlatformApplication`)**: Application start hote hi default data (Admin user, categories) daalne ke liye inhe `Repository` ya `Service` ki zaroorat padti hai.
+* **Security (`ApplicationConfig`)**: Authentication ke liye `UserDetailsService` banate waqt `UserRepository` chahiye hota hai.
+
+Tumhara ArchUnit rule ekdum rigid watchman ban gaya hai jo inn "Maintenance Staff" (Schedulers/Configs) ko building mein ghusne hi nahi de raha.
+
+### The Enterprise Solution (2 Options):
+Barclays ya kisi bhi top Pune firm mein, hum isko aise handle karte hain:
+
+**Option 1 (Highly Recommended): Update the ArchUnit Rule.**
+Hum `ArchitectureTest.java` mein rule ko "Spring Boot Aware" banate hain. Hum declare karte hain ki `Scheduler` layer bhi `Service` ko access kar sakti hai, aur `Config` layer bhi zaroorat padne par setup kar sakti hai.
+
+**Option 2 (Code Refactoring): Move everything to Services.**
+Hum Configs aur `ForgePlatformApplication` (main class) se saare `save()` methods nikal kar ek `DatabaseSeederService` banayenge. Schedulers ko satisfy karne ke liye rule toh thoda change karna hi padega.
+
+Sensei, main recommend karunga ki tum mujhe apni **`ArchitectureTest.java`** file bhejo. Main us strict rule ko enterprise-standard par tune kar dunga. Ek file change hogi, aur ye baaki 30 violations seedha 0 par drop ho jayenge! Bheju kya fix?

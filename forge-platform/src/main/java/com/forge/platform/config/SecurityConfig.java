@@ -29,24 +29,27 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        // 2. Open Endpoints (Sab merge kar diye ek jagah)
+                        // 1. Open Endpoints (Public)
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/v1/engine/**",
-                                "/ws-forge/**",
-                                "/error",        // SENSEI: Error fallback bypass
+                                "/ws/**",
+                                "/ws-forge/**",// 🔥 SENSEI FIX: Changed /ws-forge/** to /ws/**
+                                "/api/v1/auctions/active",  // 🔥 SENSEI FIX: Lobby ko public kiya
+                                "/api/v1/images/**",
+                                "/error",
                                 "/index.html",
                                 "/"
                         ).permitAll()
 
-                        // 3. Authenticated Resources (Only logged-in users)
+                        // 2. Authenticated Resources (Only logged-in users)
                         .requestMatchers("/api/bids/**").authenticated()
-                        .requestMatchers("/api/v1/auctions/**").hasAuthority("ROLE_USER")
+                        .requestMatchers("/api/v1/auctions/**").hasAuthority("ROLE_USER") // Ab bache hue auction routes secure rahenge
                         .requestMatchers("/api/v1/wallet/**").hasAuthority("ROLE_USER")
 
-                        // 4. Fallback Guard
+                        // 3. Fallback Guard
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

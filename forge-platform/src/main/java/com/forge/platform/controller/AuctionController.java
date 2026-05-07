@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -33,26 +32,16 @@ public class AuctionController {
         return ResponseEntity.ok("Bid placed successfully by " + bidder.getFullName());
     }
 
+    /**
+     * 🔥 SENSEI FIX: Replaced manual stream with clean pagination call.
+     * Ab list crash nahi hogi aur performance mast rahegi.
+     */
     @GetMapping("/active")
-    public ResponseEntity<?> getActiveAuctions() {
-        List<Auction> activeAuctions = auctionService.getAllActiveAuctions();
-
-        List<Map<String, Object>> safeResponse = activeAuctions.stream()
-                .map(auction -> {
-                    Map<String, Object> map = new java.util.HashMap<>();
-                    map.put("id", auction.getId());
-                    map.put("title", auction.getTitle());
-                    map.put("currentHighestBid", auction.getCurrentHighestBid());
-                    map.put("endTime", auction.getEndTime());
-                    map.put("imageUrl", auction.getImageUrl());
-                    map.put("description", auction.getDescription());
-                    map.put("sellerEmail", auction.getSeller() != null ? auction.getSeller().getEmail() : null);
-                    map.put("status", auction.getStatus() != null ? auction.getStatus().name() : "UNKNOWN");
-                    return map;
-                })
-                .collect(java.util.stream.Collectors.toList());
-
-        return ResponseEntity.ok(safeResponse);
+    public ResponseEntity<?> getActiveAuctions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        // AuctionService ka paginated method use kar rahe hain jo humne pehle likha tha
+        return ResponseEntity.ok(auctionService.getActiveAuctionsPaginated(page, size));
     }
 
     @PostMapping
@@ -87,7 +76,7 @@ public class AuctionController {
         try {
             auctionService.deleteAuction(id, seller);
             return ResponseEntity.ok("Auction deleted");
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             return ResponseEntity.status(403).body(e.getMessage());
         }
     }

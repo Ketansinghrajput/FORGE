@@ -1,10 +1,13 @@
-# IntelliJ IDEA
+# IDEs
 .idea/
 *.iml
-out/
-gen/
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
 
-# Maven
+# Maven & Build
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -16,13 +19,36 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# Compiled class files
+# Compiled files
 *.class
+*.jar
+*.war
+*.ear
 
-# Log files
+# Logs & Temp
 logs/
 *.log
+temp/
+tmp/
 
-# OS files
+# OS Specific
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+desktop.ini
+
+# Project Specific (FORGE)
+# Docker/Local Infra data - don't push your local DB/Storage
+docker-compose.override.yml
+.env
+minio_data/
+postgres_data/
+redis_data/
+
+# JaCoCo & Reports
+*.exec
+site/
+
+# Lombok
+.lombok-generated-sources

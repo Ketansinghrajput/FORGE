@@ -4,15 +4,11 @@ import com.forge.platform.dto.UserCreateDto;
 import com.forge.platform.dto.UserRequestDto;
 import com.forge.platform.dto.UserResponseDto;
 import com.forge.platform.entity.User;
-import com.forge.platform.entity.Wallet;
-import com.forge.platform.repository.WalletRepository; // 🔥 Added
 import com.forge.platform.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -20,7 +16,7 @@ import java.math.BigDecimal;
 public class UserController {
 
     private final UserService userService;
-    private final WalletRepository walletRepository; // 🔥 Added for live sync
+    // 🔥 REMOVED: WalletRepository. Controller should never touch Repositories!
 
     @PostMapping("/register")
     public ResponseEntity<User> register(@RequestBody UserCreateDto dto) {
@@ -34,17 +30,8 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDto> getProfile(@AuthenticationPrincipal User user) {
-        BigDecimal liveBalance = walletRepository.findByUser(user)
-                .map(Wallet::getAvailableBalance) //   totalBalance - lockedAmount
-                .orElse(BigDecimal.ZERO);
-
-        return ResponseEntity.ok(new UserResponseDto(
-                user.getId(),
-                user.getEmail(),
-                user.getFullName(),
-                liveBalance,
-                user.getCreatedAt()
-        ));
+        // 🔥 FIX: Delegated entirely to Service layer
+        return ResponseEntity.ok(userService.getUserProfile(user));
     }
 
     @PutMapping("/me")

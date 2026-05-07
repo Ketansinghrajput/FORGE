@@ -6,36 +6,65 @@ import java.util.Objects;
 
 public record Money(BigDecimal amount, String currency) implements Comparable<Money> {
 
-    // Primary Constructor Validation
     public Money {
         Objects.requireNonNull(amount, "Amount cannot be null");
         Objects.requireNonNull(currency, "Currency cannot be null");
-        // Hamesha 2 decimal places pe scale set karo (e.g., 10 -> 10.00)
-        // Taaki comparison mein precision ka jhagda na ho
         amount = amount.setScale(2, RoundingMode.HALF_UP);
     }
 
-    // Helper: Sirf amount se INR banane ke liye (App.java ke liye)
     public Money(BigDecimal amount) {
         this(amount, "INR");
     }
 
-    // Static Factory Method (Jo tune banaya tha, optimized)
     public static Money of(String amount, String currency) {
         return new Money(new BigDecimal(amount), currency);
     }
 
-    // Getter for amount (App.java aur controllers ke liye)
+    public static Money inr(double amount) {
+        return new Money(BigDecimal.valueOf(amount), "INR");
+    }
+
+    public static Money inr(BigDecimal amount) {
+        return new Money(amount, "INR");
+    }
+
+    public Money add(Money other) {
+        validateSameCurrency(other);
+        return new Money(this.amount.add(other.amount), this.currency);
+    }
+
+    public Money subtract(Money other) {
+        validateSameCurrency(other);
+        return new Money(this.amount.subtract(other.amount), this.currency);
+    }
+
+    public Money multiply(double factor) {
+        return new Money(this.amount.multiply(BigDecimal.valueOf(factor)).setScale(2, RoundingMode.HALF_UP), this.currency);
+    }
+
+    public boolean isGreaterThan(Money other) {
+        validateSameCurrency(other);
+        return this.amount.compareTo(other.amount) > 0;
+    }
+
+    public boolean isZeroOrNegative() {
+        return this.amount.compareTo(BigDecimal.ZERO) <= 0;
+    }
+
     public BigDecimal getAmount() {
         return amount;
     }
 
-    @Override
-    public int compareTo(Money other) {
+    private void validateSameCurrency(Money other) {
         if (!this.currency.equals(other.currency)) {
-            throw new IllegalArgumentException("Cannot compare different currencies: "
+            throw new IllegalArgumentException("Cannot operate on different currencies: "
                     + this.currency + " vs " + other.currency);
         }
+    }
+
+    @Override
+    public int compareTo(Money other) {
+        validateSameCurrency(other);
         return this.amount.compareTo(other.amount);
     }
 

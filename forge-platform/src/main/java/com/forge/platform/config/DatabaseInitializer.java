@@ -1,3 +1,5 @@
+
+
 package com.forge.platform.config;
 
 import com.forge.platform.entity.Auction;
@@ -20,7 +22,7 @@ import java.time.LocalDateTime;
 public class DatabaseInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(
+    public CommandLineRunner initDatabase(
             UserRepository userRepo,
             WalletRepository walletRepo,
             AuctionRepository auctionRepo) {
@@ -60,7 +62,6 @@ public class DatabaseInitializer {
                 walletRepo.save(senseiWallet);
 
                 // 4. Create Dummy Auction (Rolex Submariner)
-                // FIX: Added startTime to avoid PropertyValueException
                 Auction auction = Auction.builder()
                         .title("Rolex Submariner Vintage")
                         .description("Testing Escrow Bidding Logic - High Performance Auction")
@@ -69,7 +70,7 @@ public class DatabaseInitializer {
                         .startTime(LocalDateTime.now()) // Mandatory Field
                         .endTime(LocalDateTime.now().plusDays(7))
                         .status(AuctionStatus.ACTIVE)
-                        .seller(seller) // Linked to Seller, NOT Sensei
+                        .seller(seller)
                         .build();
                 auctionRepo.save(auction);
 

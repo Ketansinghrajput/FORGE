@@ -30,7 +30,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
 
-        //   Source of Truth: Naya wallet reset state mein
+        // Source of Truth: Naya wallet reset state mein
         Wallet wallet = Wallet.builder()
                 .user(savedUser)
                 .totalBalance(BigDecimal.ZERO)
@@ -41,6 +41,22 @@ public class UserService {
         return savedUser;
     }
 
+    // 🔥 NEW METHOD ADDED: Handles fetching live balance and building the DTO
+    @Transactional(readOnly = true)
+    public UserResponseDto getUserProfile(User user) {
+        BigDecimal liveBalance = walletRepository.findByUser(user)
+                .map(Wallet::getAvailableBalance) // totalBalance - lockedAmount
+                .orElse(BigDecimal.ZERO);
+
+        return new UserResponseDto(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                liveBalance,
+                user.getCreatedAt()
+        );
+    }
+
     @Transactional
     public UserResponseDto updateProfile(User user, UserRequestDto dto) {
         if (dto.getFullName() != null && !dto.getFullName().isBlank()) {
@@ -48,7 +64,7 @@ public class UserService {
         }
         User saved = userRepository.save(user);
 
-        // 🔥 SENSEI FIX: Yahan WalletRepository se live balance fetch karo
+        // SENSEI FIX: Yahan WalletRepository se live balance fetch karo
         BigDecimal liveBalance = walletRepository.findByUser(saved)
                 .map(Wallet::getTotalBalance)
                 .orElse(BigDecimal.ZERO);
@@ -57,9 +73,14 @@ public class UserService {
                 saved.getId(),
                 saved.getEmail(),
                 saved.getFullName(),
-                liveBalance, // 👈 Passing live balance from Wallet table
+                liveBalance, // Passing live balance from Wallet table
                 saved.getCreatedAt()
         );
+    }
+
+    public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found: " + email));
     }
 
     @Transactional
