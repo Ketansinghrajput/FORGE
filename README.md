@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/FORGE.jpg" width="200" alt="FORGE Logo"/>
+  <img src="./assets/FORGE.jpeg" width="700" alt="FORGE Logo"/>
 </p>
 # FORGE — Real-Time Auction & Commerce Engine
 
