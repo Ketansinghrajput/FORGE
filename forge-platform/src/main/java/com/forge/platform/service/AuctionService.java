@@ -277,4 +277,65 @@ public class AuctionService {
 
         messagingTemplate.convertAndSend("/topic/auctions/" + auction.getId(), payload);
     }
+
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getResultAuctions(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("endTime").descending());
+
+        List<AuctionStatus> closedStatuses = List.of(
+                AuctionStatus.COMPLETED,
+                AuctionStatus.CLOSED,
+                AuctionStatus.EXPIRED,
+                AuctionStatus.CANCELLED
+        );
+
+        // Fetch formally closed auctions + ACTIVE ones whose endTime has passed
+        Page<Auction> auctionPage = auctionRepository.findResultAuctions(
+                closedStatuses,
+                LocalDateTime.now(),
+                pageable
+        );
+
+        List<Map<String, Object>> content = auctionPage.getContent().stream()
+                .map(auction -> {
+                    // CLOSED with a winner = sold, CLOSED with no bids = expired
+                    String displayStatus = auction.getStatus().name();
+                    if (auction.getStatus() == AuctionStatus.ACTIVE
+                            && auction.getEndTime().isBefore(LocalDateTime.now())) {
+                        displayStatus = auction.getHighestBidder() != null
+                                ? "COMPLETED" : "EXPIRED";
+                    }
+
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id",          auction.getId());
+                    map.put("title",       auction.getTitle());
+                    map.put("description", auction.getDescription());
+                    map.put("imageUrl",    auction.getImageUrl());
+                    map.put("status",      displayStatus);
+                    map.put("startPrice",  auction.getStartingPrice());
+                    map.put("currentPrice",auction.getCurrentHighestBid());
+                    map.put("endTime",     auction.getEndTime().toString());
+                    map.put("sellerEmail", auction.getSeller() != null
+                            ? auction.getSeller().getEmail() : null);
+
+                    if (auction.getHighestBidder() != null) {
+                        map.put("winnerName",  auction.getHighestBidder().getFullName());
+                        map.put("winnerEmail", auction.getHighestBidder().getEmail());
+                    } else {
+                        map.put("winnerName",  null);
+                        map.put("winnerEmail", null);
+                    }
+
+                    map.put("bidCount", bidRepository.countByAuctionId(auction.getId()));
+                    return map;
+                })
+                .toList();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("content",       content);
+        response.put("totalPages",    auctionPage.getTotalPages());
+        response.put("totalElements", auctionPage.getTotalElements());
+        return response;
+    }
 }

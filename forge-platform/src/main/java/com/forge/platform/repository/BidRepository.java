@@ -26,6 +26,8 @@ public interface BidRepository extends JpaRepository<Bid, Long> {
      */
     List<Bid> findByBidderId(Long bidderId);
 
+    long countByAuctionId(Long auctionId);
+
     /**
      * 3. Pro Level: Highest bid nikalne ke liye optimized query.
      * Barclays Pune ke round mein 'Limit 1' ya 'Top 1' ka use dikhana impressed karta hai.

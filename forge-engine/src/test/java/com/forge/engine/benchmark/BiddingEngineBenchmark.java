@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @State(Scope.Benchmark)
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 2)
-@Fork(0) // 🔥 SENSEI: Same process mein chalane ke liye 0 zaroori hai
+@Fork(5) // 🔥 SENSEI: Same process mein chalane ke liye 0 zaroori hai
 public class BiddingEngineBenchmark {
 
     private BiddingEngine engine;
