@@ -33,6 +33,16 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
 
     Page<Auction> findByStatus(AuctionStatus status, Pageable pageable);
 
+    @Query("SELECT a FROM Auction a WHERE " +
+            "(a.status IN :statuses) OR " +
+            "(a.status = 'ACTIVE' AND a.endTime <= :now)")
+    Page<Auction> findResultAuctions(
+            @Param("statuses") List<AuctionStatus> statuses,
+            @Param("now") LocalDateTime now,
+            Pageable pageable);
+
+
+
     // 🔥 SENSEI FIX: Naya method jo multiple statuses ek saath fetch karega
     Page<Auction> findByStatusIn(List<AuctionStatus> statuses, Pageable pageable);
 }

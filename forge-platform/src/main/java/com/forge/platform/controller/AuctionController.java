@@ -80,4 +80,11 @@ public class AuctionController {
             return ResponseEntity.status(403).body(e.getMessage());
         }
     }
+    @GetMapping("/results")
+    public ResponseEntity<?> getAuctionResults(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(auctionService.getResultAuctions(page, size));
+    }
 }
