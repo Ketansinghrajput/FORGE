@@ -20,14 +20,13 @@ public class NotificationService {
     private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
 
-    @Async // 🔥 Backend par email jayega, user wait nahi karega
+    @Async
     public void sendAuctionWonEmail(String toEmail, String auctionTitle, BigDecimal finalAmount) {
         try {
             Context context = new Context();
             context.setVariable("title", auctionTitle);
             context.setVariable("amount", finalAmount);
 
-            // Thymeleaf template render karo
             String htmlContent = templateEngine.process("emails/auction-won", context);
 
             MimeMessage message = mailSender.createMimeMessage();
@@ -44,14 +43,13 @@ public class NotificationService {
             log.error("❌ Failed to send win email", e);
         }
     }
-    @Async // 🔥 Backend thread handle karega, user ko lag nahi milega
+    @Async
     public void sendOutbidEmail(String toEmail, String auctionTitle, BigDecimal newHighestPrice) {
         try {
             Context context = new Context();
             context.setVariable("title", auctionTitle);
             context.setVariable("newPrice", newHighestPrice);
 
-            // Thymeleaf template render karo (outbid.html file honi chahiye)
             String htmlContent = templateEngine.process("emails/outbid", context);
 
             MimeMessage message = mailSender.createMimeMessage();

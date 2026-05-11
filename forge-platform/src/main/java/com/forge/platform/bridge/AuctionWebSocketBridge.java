@@ -21,13 +21,10 @@ public class AuctionWebSocketBridge {
 
     @PostConstruct
     public void bridgeEngineToWeb() {
-        // Naye EventBus mein sirf event listener pass hota hai
         eventBus.subscribe(event -> {
-            // Pattern Matching: Agar event 'BidPlacedEvent' type ka hai toh cast bhi khud ho jayega
             if (event instanceof BidPlacedEvent bidEvent) {
                 String destination = "/topic/auctions/" + bidEvent.auctionId();
 
-                // WebSocket broadcast
                 messagingTemplate.convertAndSend(destination, bidEvent.bid());
 
                 log.info("⚡ Real-time Broadcast to {}: {} by {}",

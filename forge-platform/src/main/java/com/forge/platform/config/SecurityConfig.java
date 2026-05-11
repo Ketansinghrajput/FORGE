@@ -36,8 +36,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/api/v1/engine/**",
                                 "/ws/**",
-                                "/ws-forge/**",// 🔥 SENSEI FIX: Changed /ws-forge/** to /ws/**
-                                "/api/v1/auctions/active",  // 🔥 SENSEI FIX: Lobby ko public kiya
+                                "/ws-forge/**",
+                                "/api/v1/auctions/active",
                                 "/api/v1/images/**",
                                 "/error",
                                 "/index.html",
@@ -46,7 +46,7 @@ public class SecurityConfig {
 
                         // 2. Authenticated Resources (Only logged-in users)
                         .requestMatchers("/api/bids/**").authenticated()
-                        .requestMatchers("/api/v1/auctions/**").hasAuthority("ROLE_USER") // Ab bache hue auction routes secure rahenge
+                        .requestMatchers("/api/v1/auctions/**").hasAuthority("ROLE_USER")
                         .requestMatchers("/api/v1/wallet/**").hasAuthority("ROLE_USER")
 
                         // 3. Fallback Guard

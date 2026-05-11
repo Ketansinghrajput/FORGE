@@ -18,9 +18,7 @@ public class EngineTestController {
         this.engine = engine;
     }
 
-    /**
-     * POST /api/bids/place?auctionId=101&userId=Sensei&amount=15000
-     */
+
     @PostMapping("/place")
     public CompletableFuture<String> placeBid(
             @RequestParam Long auctionId,
@@ -29,7 +27,6 @@ public class EngineTestController {
 
         Bid newBid = new Bid(userId, new Money(BigDecimal.valueOf(amount), "INR"));
 
-        // Async call using Virtual Threads
         return engine.placeBid(auctionId, newBid)
                 .thenApply(success -> success ? "ACCEPTED ✅" : "REJECTED ❌");
     }

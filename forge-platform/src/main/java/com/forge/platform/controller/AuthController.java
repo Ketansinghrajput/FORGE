@@ -19,13 +19,11 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<User> register(@Valid @RequestBody UserCreateDto request) {
-        // Sirf request aayi aur service ko de di
         return ResponseEntity.ok(authService.register(request));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        // Service token banayegi aur Controller usko frontend pe bhej dega
         return ResponseEntity.ok(authService.login(request));
     }
 

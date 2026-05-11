@@ -232,10 +232,8 @@ public class AuctionService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> getActiveAuctionsPaginated(int page, int size) {
-        // 🔥 SENSEI FIX: Sorting by endTime ascending (Earliest ending items appear first)
         Pageable pageable = PageRequest.of(page, size, Sort.by("endTime").ascending());
 
-        // 🔥 SENSEI FIX: Fetching both ACTIVE and PLANNED auctions
         List<AuctionStatus> targetStatuses = List.of(AuctionStatus.ACTIVE, AuctionStatus.PLANNED);
         Page<Auction> auctionPage = auctionRepository.findByStatusIn(targetStatuses, pageable);
 
@@ -245,11 +243,11 @@ public class AuctionService {
                     map.put("id", auction.getId());
                     map.put("title", auction.getTitle());
                     map.put("currentHighestBid", auction.getCurrentHighestBid());
-                    map.put("startTime", auction.getStartTime().toString()); // Frontend needs this to show "Starts in..."
-                    map.put("endTime", auction.getEndTime().toString());     // Frontend needs this to show "Ends in..."
+                    map.put("startTime", auction.getStartTime().toString());
+                    map.put("endTime", auction.getEndTime().toString());
                     map.put("imageUrl", auction.getImageUrl());
                     map.put("description", auction.getDescription());
-                    map.put("status", auction.getStatus().name());           // Status is crucial for disabling Bid buttons
+                    map.put("status", auction.getStatus().name());
                     map.put("sellerEmail", auction.getSeller() != null ? auction.getSeller().getEmail() : null);
                     return map;
                 })

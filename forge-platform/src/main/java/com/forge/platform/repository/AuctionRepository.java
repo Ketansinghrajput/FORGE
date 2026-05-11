@@ -43,6 +43,5 @@ public interface AuctionRepository extends JpaRepository<Auction, Long> {
 
 
 
-    // 🔥 SENSEI FIX: Naya method jo multiple statuses ek saath fetch karega
     Page<Auction> findByStatusIn(List<AuctionStatus> statuses, Pageable pageable);
 }

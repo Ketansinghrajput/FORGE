@@ -27,9 +27,6 @@ public class User extends BaseEntity implements UserDetails {
     @Column(nullable = false)
     private String fullName;
 
-    // 🔥 SENSEI FIX: Redundant walletBalance removed.
-    // Data ab sirf 'wallets' table se aayega.
-
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

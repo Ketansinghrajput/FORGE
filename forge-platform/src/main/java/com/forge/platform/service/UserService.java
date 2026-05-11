@@ -30,7 +30,6 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         User savedUser = userRepository.save(user);
 
-        // Source of Truth: Naya wallet reset state mein
         Wallet wallet = Wallet.builder()
                 .user(savedUser)
                 .totalBalance(BigDecimal.ZERO)
@@ -41,7 +40,6 @@ public class UserService {
         return savedUser;
     }
 
-    // 🔥 NEW METHOD ADDED: Handles fetching live balance and building the DTO
     @Transactional(readOnly = true)
     public UserResponseDto getUserProfile(User user) {
         BigDecimal liveBalance = walletRepository.findByUser(user)
@@ -64,7 +62,6 @@ public class UserService {
         }
         User saved = userRepository.save(user);
 
-        // SENSEI FIX: Yahan WalletRepository se live balance fetch karo
         BigDecimal liveBalance = walletRepository.findByUser(saved)
                 .map(Wallet::getTotalBalance)
                 .orElse(BigDecimal.ZERO);
@@ -73,7 +70,7 @@ public class UserService {
                 saved.getId(),
                 saved.getEmail(),
                 saved.getFullName(),
-                liveBalance, // Passing live balance from Wallet table
+                liveBalance,
                 saved.getCreatedAt()
         );
     }
