@@ -22,7 +22,6 @@ public class BidService {
         return bidRepository.findByBidderId(userId).stream().map(bid -> {
             Auction auction = bid.getAuction();
 
-            // 🔥 SENSEI FIX: Using correct column names from your DB
             // DB mein 'current_highest_bid' hai toh entity mein 'currentHighestBid' hoga
             boolean isTopBid = bid.getAmount().compareTo(auction.getCurrentHighestBid()) == 0;
 

@@ -22,7 +22,7 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-@Slf4j // SENSEI: Debugging ke liye logs bohot kaam aayenge
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
@@ -68,7 +68,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (ExpiredJwtException | SignatureException | MalformedJwtException e) {
-            // SENSEI: Agar token expire ho gaya ya galat hai, toh yahan log karke filter exit kar do
             log.error("JWT Validation failed: {}", e.getMessage());
         }
 

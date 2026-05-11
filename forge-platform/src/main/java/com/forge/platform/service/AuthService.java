@@ -37,7 +37,6 @@ public class AuthService {
             throw new IllegalArgumentException("Email already registered!");
         }
 
-        // 1. User save karo
         // 1. User save karo (Bypassing Lombok SuperBuilder Glitch)
         User user = new User();
         user.setFullName(request.getFullName());
@@ -76,9 +75,7 @@ public class AuthService {
         log.info("✅ User {} logged in successfully. Token generated.", user.getEmail());
 
         // FIX 2: Check your AuthResponse record!
-        // Agar usme 5 fields hain (e.g. userId as String), toh yahan String.valueOf(user.getId()) add karna hoga.
-        // Agar message hai toh "Login Successful" daal dena.
-        // Niche maine 5 parameters pass kiye hain assuming pehla ID hai:
+
         return new AuthResponse(
                 String.valueOf(user.getId()),  // 1. id
                 jwtToken,                      // 2. token

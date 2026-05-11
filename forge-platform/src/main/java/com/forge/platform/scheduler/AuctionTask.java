@@ -13,7 +13,6 @@ public class AuctionTask {
 
     private final AuctionService auctionService;
 
-    // Har 1 minute mein chalega (60000ms)
     @Scheduled(fixedRate = 60000)
     public void checkExpiredAuctions() {
         log.info("AuctionTask: Running scheduled expiry check...");

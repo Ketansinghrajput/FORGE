@@ -34,7 +34,7 @@ public class ForgePlatformApplication {
     }
 
     @Bean
-    @Profile("!test") // 🔥 SENSEI FIX: Yeh line Spring ko rokegi test me data daalne se!
+    @Profile("!test")
     CommandLineRunner initData(
             UserRepository userRepository,
             WalletRepository walletRepository,

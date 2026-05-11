@@ -15,7 +15,7 @@ import java.util.Map;
 public class BiddingWebSocketController {
 
     private final AuctionService auctionService;
-    private final SimpMessagingTemplate messagingTemplate; // 🔥 inject karo
+    private final SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/bid")
     public void processBidFromClient(
@@ -35,7 +35,6 @@ public class BiddingWebSocketController {
         } catch (Exception e) {
             System.err.println("🔴 Bid Failed: " + e.getMessage());
 
-            // 🔥 Error user ko personally bhejo — frontend /user/queue/errors sun raha hai
             messagingTemplate.convertAndSendToUser(
                     email,
                     "/queue/errors",

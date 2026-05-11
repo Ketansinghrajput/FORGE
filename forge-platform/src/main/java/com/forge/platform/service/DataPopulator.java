@@ -22,7 +22,7 @@ public class DataPopulator implements CommandLineRunner {
     private final WalletRepository walletRepository;
 
     @Override
-    @Transactional // SENSEI: Transactional is mandatory taaki partial data save na ho
+    @Transactional
     public void run(String... args) throws Exception {
         log.info("🚀 Starting Database Population...");
 

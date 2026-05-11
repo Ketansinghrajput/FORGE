@@ -46,13 +46,12 @@ public class WebSocketSecurityConfig implements WebSocketMessageBrokerConfigurer
                                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                             userDetails, null, userDetails.getAuthorities());
 
-                                    // 🚀 SENSEI: Ye line sabse important hai!
-                                    // Isse Spring Message mapping ko pata chalta hai user kaun hai.
+
                                     accessor.setUser(authToken);
                                     log.info("🟢 STOMP Auth Success: User [{}] connected", userEmail);
                                 } else {
                                     log.error("🔴 STOMP Auth Failed: Token invalid for user {}", userEmail);
-                                    throw new IllegalArgumentException("Invalid Token"); // Connection reject karne ke liye
+                                    throw new IllegalArgumentException("Invalid Token");
                                 }
                             }
                         } catch (Exception e) {
@@ -61,7 +60,6 @@ public class WebSocketSecurityConfig implements WebSocketMessageBrokerConfigurer
                         }
                     } else {
                         log.warn("🔴 STOMP Auth Failed: Token literally 'null' or empty");
-                        // Authentication fail hone par connection allow nahi karna chahiye
                         throw new IllegalArgumentException("No Token Found");
                     }
                 }

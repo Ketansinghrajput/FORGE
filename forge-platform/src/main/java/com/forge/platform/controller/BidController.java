@@ -21,10 +21,8 @@ public class BidController {
     @GetMapping("/my")
     @Transactional(readOnly = true)
     public ResponseEntity<List<BidResponseDto>> getMyBids(@AuthenticationPrincipal User user) {
-        // 🔥 SENSEI FIX: Service ab seedha DTO list deti hai
         List<BidResponseDto> response = bidService.getMyBids(user.getId());
 
-        // Latest bids top par dikhane ke liye sorting (placedAt record field hai)
         List<BidResponseDto> sortedResponse = response.stream()
                 .sorted((a, b) -> {
                     if (a.placedAt() == null) return 1;

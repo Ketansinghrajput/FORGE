@@ -27,7 +27,6 @@ public class DatabaseInitializer {
             WalletRepository walletRepo,
             AuctionRepository auctionRepo) {
         return args -> {
-            // Check if DB is empty to prevent primary key conflicts
             if (userRepo.count() == 0) {
 
                 // 1. Create SELLER (Required because you can't bid on your own items)

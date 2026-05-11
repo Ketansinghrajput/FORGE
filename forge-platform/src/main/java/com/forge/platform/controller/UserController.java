@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-    // 🔥 REMOVED: WalletRepository. Controller should never touch Repositories!
 
     @PostMapping("/register")
     public ResponseEntity<User> register(@RequestBody UserCreateDto dto) {
@@ -30,7 +29,6 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDto> getProfile(@AuthenticationPrincipal User user) {
-        // 🔥 FIX: Delegated entirely to Service layer
         return ResponseEntity.ok(userService.getUserProfile(user));
     }
 

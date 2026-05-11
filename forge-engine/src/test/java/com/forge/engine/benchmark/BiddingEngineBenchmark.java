@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @State(Scope.Benchmark)
 @Warmup(iterations = 3, time = 1)
 @Measurement(iterations = 5, time = 2)
-@Fork(5) // 🔥 SENSEI: Same process mein chalane ke liye 0 zaroori hai
+@Fork(5)
 public class BiddingEngineBenchmark {
 
     private BiddingEngine engine;
@@ -58,7 +58,7 @@ public class BiddingEngineBenchmark {
     public static void main(String[] args) throws Exception {
         Options opt = new OptionsBuilder()
                 .include(BiddingEngineBenchmark.class.getSimpleName())
-                .forks(0) // 🔥 SENSEI FIX: Isko 1 se 0 karna mandatory tha
+                .forks(0)
                 .build();
 
         new Runner(opt).run();

@@ -24,13 +24,13 @@ public class DatabaseBridge {
 
     private final EventBus eventBus;
     private final BidRepository bidRepository;
-    private final EntityManager entityManager; // Proxies banane ke liye
+    private final EntityManager entityManager;
 
     @PostConstruct
     public void bridgeEngineToDatabase() {
         eventBus.subscribe(event -> {
             if (event instanceof BidPlacedEvent bidEvent) {
-                saveBidToDb(bidEvent); // Ye missing lag raha hai screenshot mein
+                saveBidToDb(bidEvent);
             }
         });
     }
@@ -38,12 +38,10 @@ public class DatabaseBridge {
     @Transactional
     protected void saveBidToDb(BidPlacedEvent event) {
         try {
-            // JPA Reference: Bina SELECT query maare proxy objects banana
-            // Humein pata hai IDs valid hain kyunki engine ne validate kiya hai
+
             Auction auctionProxy = entityManager.getReference(Auction.class, event.auctionId());
 
-            // Note: Agar bidderId String hai toh User table mein usse map karna hoga
-            // Filhal hum Assume kar rahe hain ki bidderId Long ki String value hai
+
             User bidderProxy = entityManager.getReference(User.class, Long.parseLong(event.bid().getBidderId()));
 
             Bid bid = Bid.builder()

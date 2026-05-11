@@ -32,15 +32,11 @@ public class AuctionController {
         return ResponseEntity.ok("Bid placed successfully by " + bidder.getFullName());
     }
 
-    /**
-     * 🔥 SENSEI FIX: Replaced manual stream with clean pagination call.
-     * Ab list crash nahi hogi aur performance mast rahegi.
-     */
+
     @GetMapping("/active")
     public ResponseEntity<?> getActiveAuctions(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        // AuctionService ka paginated method use kar rahe hain jo humne pehle likha tha
         return ResponseEntity.ok(auctionService.getActiveAuctionsPaginated(page, size));
     }
 

@@ -20,7 +20,6 @@ public class EngineStateController {
             @PathVariable Long auctionId,
             Principal principal
     ) {
-        // 🔥 SENSEI FIX: Controller ab kuch fetch nahi karega, seedha service ko bulayega
         Map<String, Object> response = auctionService.getInitialAuctionState(auctionId, principal.getName());
         return ResponseEntity.ok(response);
     }

@@ -29,11 +29,8 @@ public class Bid extends BaseEntity {
 
     @Builder.Default
     @Column(nullable = false)
-    private boolean successful = false; // By default bid successful nahi hoti jab tak auction end na ho
+    private boolean successful = false;
 
-    // 🚨 SENSEI REALITY CHECK:
-    // Agar tere 'BaseEntity' class mein already 'createdAt' ya 'createdDate' hai,
-    // toh isko yahan se HATA DE, warna JPA confuse ho jayega.
-    // Agar BaseEntity mein nahi hai, toh hi isko rakhna.
+
 
 }

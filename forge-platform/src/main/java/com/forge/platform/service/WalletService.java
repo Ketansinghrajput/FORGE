@@ -37,7 +37,6 @@ public class WalletService {
         log.info("💰 Processing top-up of ₹{} for {}", amount, email);
         User user = userRepository.findByEmail(email).orElseThrow();
 
-        // 🔥 Pessimistic Lock ensures no race conditions during top-up
         Wallet wallet = walletRepository.findByUserWithLock(user)
                 .orElseThrow(() -> new RuntimeException("Wallet not found!"));
 
@@ -52,8 +51,7 @@ public class WalletService {
         Wallet wallet = walletRepository.findByUserWithLock(user)
                 .orElseThrow(() -> new RuntimeException("Wallet not found!"));
 
-        // 🔥 SENSEI CRITICAL FIX: Negative balance check
-        // Agar available balance amount se chota hai, toh exception throw karo
+
         if (wallet.getAvailableBalance().compareTo(amount) < 0) {
             throw new IllegalStateException("Insufficient funds! Required: ₹" + amount + ", Available: ₹" + wallet.getAvailableBalance());
         }
@@ -91,7 +89,6 @@ public class WalletService {
 
         winnerWallet.setTotalBalance(winnerWallet.getTotalBalance().subtract(amount));
 
-        // Release the lock that was held for this bid
         BigDecimal newLocked = winnerWallet.getLockedAmount().subtract(amount);
         winnerWallet.setLockedAmount(newLocked.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : newLocked);
 

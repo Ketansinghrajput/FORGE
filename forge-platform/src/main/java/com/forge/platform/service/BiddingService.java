@@ -50,7 +50,7 @@ public class BiddingService {
         // 3. Refund & Unlock Logic
         // Agar pehle se koi highest bidder hai aur wo ye khud nahi hai, toh purane wale ka paisa unlock karo
         // BiddingService.java ke andar refund logic update kar:
-        // 3. Refund & Unlock Logic
+
         if (auction.getHighestBidder() != null && !auction.getHighestBidder().getId().equals(bidder.getId())) {
             User previousBidder = auction.getHighestBidder();
             walletRepository.findByUser(previousBidder).ifPresent(prevWallet -> {
@@ -70,8 +70,6 @@ public class BiddingService {
         }
 
         // 4. Lock Current Bidder's Money
-        // 4. Lock Current Bidder's Money
-        // SENSEI FIX: Pura lock overide nahi karna hai, purana lock add karo naye bid ke sath
         BigDecimal currentLocked = bidderWallet.getLockedAmount() != null ? bidderWallet.getLockedAmount() : BigDecimal.ZERO;
         bidderWallet.setLockedAmount(currentLocked.add(bidAmount));
         walletRepository.save(bidderWallet);
