@@ -14,7 +14,6 @@
     <artifactId>forge-platform</artifactId>
 
     <dependencies>
-
         <!-- ── Core Spring Boot ─────────────────────────────────────────────── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -70,7 +69,7 @@
             <version>6.4.4.Final</version>
         </dependency>
 
-        <!-- ── Byte Buddy — compile scope, needed by Hibernate at runtime ───── -->
+        <!-- ── Byte Buddy — compile scope ───── -->
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
@@ -128,28 +127,29 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
 
-        <!-- ── PII Masker ───────────────────────────────────────────────────── -->
+        <!-- ── PII Masker ── -->
         <dependency>
             <groupId>io.github.ketansinghrajput</groupId>
             <artifactId>pii-masker-spring-boot-starter</artifactId>
             <version>1.0.1</version>
         </dependency>
 
-        <!-- ── Core Engine ──────────────────────────────────────────────────── -->
+        <!-- ── Core Engine ── -->
         <dependency>
             <groupId>com.forge</groupId>
             <artifactId>forge-engine</artifactId>
             <version>1.0.0</version>
         </dependency>
 
-        <!-- ── Lombok ───────────────────────────────────────────────────────── -->
+        <!-- ── Lombok ── -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <version>1.18.32</version>
+            <scope>provided</scope>
         </dependency>
 
-        <!-- ── Testing ──────────────────────────────────────────────────────── -->
+        <!-- ── Testing ── -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -178,16 +178,35 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
         <plugins>
+            <!-- 🚀 Spring Boot Maven Plugin Updated for Docker Executable JAR -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>3.2.5</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- Check your exact main class path -->
+                    <mainClass>com.forge.platform.ForgePlatformApplication</mainClass>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
             </plugin>
+
+            <!-- 🛠 Compiler Plugin with Proper Annotation Processing -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -208,6 +227,8 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- 📊 JaCoCo for Code Coverage -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -225,5 +246,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

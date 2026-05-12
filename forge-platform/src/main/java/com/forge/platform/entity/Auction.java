@@ -1,6 +1,5 @@
 package com.forge.platform.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.forge.platform.enums.AuctionStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -41,13 +40,14 @@ public class Auction extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id", nullable = false)
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "authorities"})
     private User seller;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "highest_bidder_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "authorities"})
     private User highestBidder;
+
+    @Version
+    private Long version;
 
     public void setCurrentHighestBid(BigDecimal currentHighestBid) {
         this.currentHighestBid = currentHighestBid;
