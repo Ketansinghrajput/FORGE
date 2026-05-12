@@ -5,7 +5,6 @@ import com.forge.platform.entity.*;
 import com.forge.platform.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,8 +12,6 @@ import com.forge.platform.enums.AuctionStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
-import static com.forge.platform.entity.Bid_.amount;
 
 @Service
 @Slf4j
@@ -37,70 +34,68 @@ public class BiddingService {
         Wallet bidderWallet = walletRepository.findByUser(bidder)
                 .orElseThrow(() -> new RuntimeException("Wallet not found for: " + bidder.getEmail()));
 
-        // 2. Business Validations
+        // 2. Business Validations (Lock lene ke baad hi validate karna hai)
         validateBid(auction, bidder, bidderWallet, bidAmount);
-        BigDecimal currentPrice = auction.getCurrentHighestBid() != null ?
-                auction.getCurrentHighestBid() :
-                auction.getStartingPrice();
 
-        if (bidAmount.compareTo(currentPrice) <= 0) {
-            throw new IllegalArgumentException("Bid current price (₹" + currentPrice + ") se zyada honi chahiye.");
+        // 3. Smart Wallet Locking & Refund Logic (The Phantom Deduction Fix)
+        User previousBidder = auction.getHighestBidder();
+        BigDecimal previousBidAmount = auction.getCurrentHighestBid();
+
+        if (previousBidder != null) {
+            if (!previousBidder.getId().equals(bidder.getId())) {
+                // Case A: Naya user aaya hai. Purane user ke paise unlock karo.
+                walletRepository.findByUser(previousBidder).ifPresent(prevWallet -> {
+                    BigDecimal newLockedAmount = prevWallet.getLockedAmount().subtract(previousBidAmount);
+                    prevWallet.setLockedAmount(newLockedAmount.max(BigDecimal.ZERO)); // Prevent negative
+                    walletRepository.save(prevWallet);
+                    log.info("Unlocked ₹{} for previous bidder: {}", previousBidAmount, previousBidder.getEmail());
+                });
+
+                // Aur naye user (current bidder) ka pura amount lock karo
+                BigDecimal currentLocked = bidderWallet.getLockedAmount() != null ? bidderWallet.getLockedAmount() : BigDecimal.ZERO;
+                bidderWallet.setLockedAmount(currentLocked.add(bidAmount));
+
+            } else {
+                // Case B: Same user ne apni hi bid badha di. Sirf difference amount aur lock karo.
+                BigDecimal difference = bidAmount.subtract(previousBidAmount);
+                BigDecimal currentLocked = bidderWallet.getLockedAmount() != null ? bidderWallet.getLockedAmount() : BigDecimal.ZERO;
+                bidderWallet.setLockedAmount(currentLocked.add(difference));
+                log.info("Same user increased bid. Locked additional ₹{}", difference);
+            }
+        } else {
+            // Case C: First bid ever on this auction. Pura amount lock karo.
+            BigDecimal currentLocked = bidderWallet.getLockedAmount() != null ? bidderWallet.getLockedAmount() : BigDecimal.ZERO;
+            bidderWallet.setLockedAmount(currentLocked.add(bidAmount));
         }
 
-        // 3. Refund & Unlock Logic
-        // Agar pehle se koi highest bidder hai aur wo ye khud nahi hai, toh purane wale ka paisa unlock karo
-        // BiddingService.java ke andar refund logic update kar:
-
-        if (auction.getHighestBidder() != null && !auction.getHighestBidder().getId().equals(bidder.getId())) {
-            User previousBidder = auction.getHighestBidder();
-            walletRepository.findByUser(previousBidder).ifPresent(prevWallet -> {
-                log.info("Refunding previous bidder: {}", previousBidder.getEmail());
-
-                BigDecimal refundAmount = auction.getCurrentHighestBid();
-                BigDecimal newLockedAmount = prevWallet.getLockedAmount().subtract(refundAmount);
-
-                // Prevent negative locked amount
-                if (newLockedAmount.compareTo(BigDecimal.ZERO) < 0) {
-                    newLockedAmount = BigDecimal.ZERO;
-                }
-
-                prevWallet.setLockedAmount(newLockedAmount);
-                walletRepository.save(prevWallet);
-            });
-        }
-
-        // 4. Lock Current Bidder's Money
-        BigDecimal currentLocked = bidderWallet.getLockedAmount() != null ? bidderWallet.getLockedAmount() : BigDecimal.ZERO;
-        bidderWallet.setLockedAmount(currentLocked.add(bidAmount));
+        // Wallet DB mein save karo
         walletRepository.save(bidderWallet);
 
-        // 5. Smart Auction Extension (Anti-Snipe)
-        // Agar auction khatam hone mein < 1 minute bacha hai, 5 min badha do
-//        if (auction.getEndTime().minusMinutes(1).isBefore(LocalDateTime.now())) {
-//            auction.setEndTime(auction.getEndTime().plusMinutes(5));
-//            log.info("Auction extended due to last minute bid by {}", bidder.getEmail());
-//        }
+        // 4. Smart Auction Extension (Anti-Snipe) - Isko active kar diya hai, premium feature hai!
+        if (auction.getEndTime().minusMinutes(1).isBefore(LocalDateTime.now())) {
+            auction.setEndTime(auction.getEndTime().plusMinutes(5));
+            log.info("Auction extended due to last minute bid by {}", bidder.getEmail());
+        }
 
-        // 6. Update Auction State
+        // 5. Update Auction State
         auction.setCurrentHighestBid(bidAmount);
         auction.setHighestBidder(bidder);
         auctionRepository.save(auction);
 
-        // 7. Save Bid Audit Record
+        // 6. Save Bid Audit Record
         Bid bid = Bid.builder()
                 .auction(auction)
                 .bidder(bidder)
                 .amount(bidAmount)
                 .successful(true)
-                .createdAt(LocalDateTime.now())
                 .build();
         Bid savedBid = bidRepository.save(bid);
 
-        // 8. Live Broadcast
-        broadcastUpdate(auctionId, bidAmount, bidder, auction.getEndTime());
+        // 7. Live Broadcast (DB Hit removed, memory se direct bhej rahe hain)
+        broadcastUpdate(auctionId, bidAmount, bidder, auction.getEndTime(), bidderWallet.getAvailableBalance());
+
         return savedBid;
     }
-
 
     private void validateBid(Auction auction, User bidder, Wallet wallet, BigDecimal amount) {
         if (auction.getStatus() != AuctionStatus.ACTIVE) {
@@ -109,18 +104,19 @@ public class BiddingService {
         if (LocalDateTime.now().isAfter(auction.getEndTime())) {
             throw new IllegalStateException("Auction khatam ho chuki hai.");
         }
-        if (amount.compareTo(auction.getCurrentHighestBid() != null ? auction.getCurrentHighestBid() : auction.getStartingPrice()) <= 0) {
-            throw new IllegalArgumentException("Bid current price se zyada honi chahiye.");
+
+        BigDecimal currentPrice = auction.getCurrentHighestBid() != null ? auction.getCurrentHighestBid() : auction.getStartingPrice();
+        if (amount.compareTo(currentPrice) <= 0) {
+            throw new IllegalArgumentException("Bid current price (₹" + currentPrice + ") se zyada honi chahiye.");
         }
-        // Use your getAvailableBalance() helper from Wallet entity
+
         if (wallet.getAvailableBalance().compareTo(amount) < 0) {
             throw new IllegalArgumentException("Wallet mein itne paise nahi hain!");
         }
     }
 
-    @Autowired
-    private WalletService walletService;
-    private void broadcastUpdate(Long auctionId, BigDecimal amount, User bidder, LocalDateTime newEndTime) {
+    // N+1 Query fix: availableFunds ab parameter mein aayega, faltu ka walletService call hata diya.
+    private void broadcastUpdate(Long auctionId, BigDecimal amount, User bidder, LocalDateTime newEndTime, BigDecimal availableFunds) {
         String destination = "/topic/auctions/" + auctionId;
 
         AuctionUpdateDTO payload = AuctionUpdateDTO.builder()
@@ -128,14 +124,14 @@ public class BiddingService {
                 .newPrice(amount)
                 .bidder(bidder.getEmail())
                 .bidderName(bidder.getFullName())
-                .availableFunds(walletService.getWalletByUserId(bidder.getId()).getAvailableBalance())
+                .availableFunds(availableFunds) // Directly mapped!
                 .endTime(newEndTime != null ? newEndTime
                         .atZone(java.time.ZoneId.of("Asia/Kolkata"))
-                        .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null) //   THIS WAS MISSING
+                        .format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null)
                 .timestamp(LocalDateTime.now().toString())
                 .build();
 
         messagingTemplate.convertAndSend(destination, payload);
-        System.out.println("✅ Broadcast Fired to Frontend: " + payload);
+        log.info("✅ Broadcast Fired to Frontend: {}", payload);
     }
 }
