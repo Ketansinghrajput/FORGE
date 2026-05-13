@@ -14,35 +14,28 @@ import java.util.concurrent.ExecutorService;
 @Slf4j
 public class BiddingEngine {
 
-    // THE HEART: Map of all active auctions.
-    // Key = AuctionID, Value = Context (PriceTracker, StateMachine, BidBook)
+
     private final ConcurrentHashMap<Long, AuctionContext> activeAuctions = new ConcurrentHashMap<>();
 
     private final EventBus eventBus;
 
-    // Java 21 Virtual Threads pool - Har bid ek naye lightweight thread pe chalegi
     private final ExecutorService virtualExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     public BiddingEngine(EventBus eventBus) {
         this.eventBus = eventBus;
     }
 
-    /**
-     * Jab naya auction start hoga, Orchestrator yeh call karega.
-     */
+
     public void registerAuction(Long auctionId, AuctionContext context) {
         activeAuctions.put(auctionId, context);
         log.info("Auction {} registered in Engine. Ready for bids.", auctionId);
     }
     public void unregisterAuction(Long auctionId) {
-        // 'auctions' ki jagah 'activeAuctions' use karo
         activeAuctions.remove(auctionId);
         log.info("Auction {} unregistered from Engine. Memory cleared.", auctionId);
     }
 
-    /**
-     * 100% Lock-Free, Async Bid Processing
-     */
+
     public CompletableFuture<Boolean> placeBid(Long auctionId, Bid newBid) {
         return CompletableFuture.supplyAsync(() -> {
 
@@ -71,14 +64,12 @@ public class BiddingEngine {
                 return true;
             }
 
-            return false; // Bid amount was too low or CAS failed repeatedly
+            return false;
 
-        }, virtualExecutor); // Pass the Virtual Thread Executor here
+        }, virtualExecutor);
     }
 
-    /**
-     * WRITE LOCK: Ends the auction and stops new bids from entering
-     */
+
     public void endAuction(Long auctionId) {
         AuctionContext context = activeAuctions.get(auctionId);
         if (context != null) {
