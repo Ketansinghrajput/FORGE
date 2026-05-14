@@ -29,17 +29,12 @@ public class EventBus {
         log.info("New listener subscribed to EventBus");
     }
 
-    /**
-     * PRODUCER: Called by BiddingEngine.
-     * Extremely fast. Just drops the event in the queue and returns.
-     */
+
     public void publish(EngineEvent event) {
         eventQueue.offer(event);
     }
 
-    /**
-     * CONSUMER: Infinite background loop running on a Virtual Thread.
-     */
+
     private void processEvents() {
         log.info("EventBus Background Consumer Loop Started...");
         while (!Thread.currentThread().isInterrupted()) {

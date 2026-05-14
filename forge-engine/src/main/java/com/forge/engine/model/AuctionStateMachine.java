@@ -8,7 +8,7 @@ public class AuctionStateMachine {
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     public AuctionStateMachine() {
-        // Default state jab auction create hota hai
+
         this.currentState = AuctionState.DRAFT;
     }
 
@@ -44,7 +44,6 @@ public class AuctionStateMachine {
             lock.writeLock().unlock();
         }
     }
-    // Yeh method AuctionStateMachine.java mein add kar
     public void transitionToEnded() {
         boolean success = transitionTo(AuctionState.ENDED);
         if (!success) {
