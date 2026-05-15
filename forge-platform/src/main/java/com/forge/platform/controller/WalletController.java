@@ -1,29 +1,31 @@
 package com.forge.platform.controller;
 
+import com.forge.platform.entity.User;
+import com.forge.platform.entity.WalletTransaction;
+import com.forge.platform.enums.TransactionType;
 import com.forge.platform.service.WalletService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import com.forge.platform.entity.User;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/wallets")
+@RequestMapping("/api/v1/wallet")
 @RequiredArgsConstructor
 public class WalletController {
 
     private final WalletService walletService;
 
-
     @GetMapping("/balance")
     public ResponseEntity<Map<String, BigDecimal>> getBalance(@AuthenticationPrincipal User user) {
-
         return ResponseEntity.ok(walletService.getMyBalance(user.getEmail()));
     }
-
 
     @PostMapping("/topup")
     public ResponseEntity<?> topUp(
@@ -38,16 +40,27 @@ public class WalletController {
 
         try {
             walletService.topUpWallet(user.getEmail(), amount);
-
             Map<String, BigDecimal> updatedBalance = walletService.getMyBalance(user.getEmail());
-
             return ResponseEntity.ok(Map.of(
                     "message", "Paisa jama ho gaya!",
                     "addedAmount", amount,
-                    "balance", updatedBalance.get("balance")
+                    "availableBalance", updatedBalance.get("availableBalance")
             ));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", "Bank server issue? Check logs."));
         }
+    }
+
+    // GET /api/v1/wallet/transactions?page=0&size=10&type=CREDIT
+    @GetMapping("/transactions")
+    public ResponseEntity<Page<WalletTransaction>> getTransactions(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) TransactionType type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<WalletTransaction> transactions = walletService.getTransactionHistory(user.getEmail(), type, pageable);
+        return ResponseEntity.ok(transactions);
     }
 }

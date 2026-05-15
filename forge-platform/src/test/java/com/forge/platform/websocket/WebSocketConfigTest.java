@@ -15,39 +15,30 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WebSocketConfigTest {
 
-    @Mock
-    private MessageBrokerRegistry brokerRegistry;
+    @Mock private MessageBrokerRegistry brokerRegistry;
+    @Mock private StompEndpointRegistry endpointRegistry;
+    @Mock private StompWebSocketEndpointRegistration registration;
 
-    @Mock
-    private StompEndpointRegistry endpointRegistry;
-
-    @Mock
-    private StompWebSocketEndpointRegistration registration;
-
-    @InjectMocks
-    private WebSocketConfig webSocketConfig;
+    @InjectMocks private WebSocketConfig webSocketConfig;
 
     @Test
     void configureMessageBroker_ShouldEnableSimpleBrokerAndPrefix() {
-        // Act
         webSocketConfig.configureMessageBroker(brokerRegistry);
 
-        // Assert
-        verify(brokerRegistry, times(1)).enableSimpleBroker("/topic");
-        verify(brokerRegistry, times(1)).setApplicationDestinationPrefixes("/app");
+        // FIX: actual config uses "/topic" and "/queue"
+        verify(brokerRegistry).enableSimpleBroker("/topic", "/queue");
+        verify(brokerRegistry).setApplicationDestinationPrefixes("/app");
+        verify(brokerRegistry).setUserDestinationPrefix("/user");
     }
 
     @Test
     void registerStompEndpoints_ShouldSetEndpointAndOrigins() {
-        // Setup: Mocking the fluent API of StompEndpointRegistry
         when(endpointRegistry.addEndpoint("/ws-forge")).thenReturn(registration);
         when(registration.setAllowedOriginPatterns("*")).thenReturn(registration);
         when(registration.setAllowedOrigins(anyString())).thenReturn(registration);
 
-        // Act
         webSocketConfig.registerStompEndpoints(endpointRegistry);
 
-        // Assert
         verify(endpointRegistry).addEndpoint("/ws-forge");
         verify(registration).setAllowedOriginPatterns("*");
         verify(registration).setAllowedOrigins("http://localhost:4200");

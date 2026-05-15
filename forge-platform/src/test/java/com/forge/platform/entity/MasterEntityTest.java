@@ -15,7 +15,6 @@ class MasterEntityTest {
     void testUserEntity() {
         LocalDateTime now = LocalDateTime.now();
 
-        // Test SuperBuilder & inherited fields
         User user1 = User.builder()
                 .id(1L)
                 .createdAt(now)
@@ -26,7 +25,6 @@ class MasterEntityTest {
                 .role(UserRole.USER)
                 .build();
 
-        // Test Setters
         User user2 = new User();
         user2.setId(2L);
         user2.setCreatedAt(now);
@@ -36,7 +34,6 @@ class MasterEntityTest {
         user2.setFullName("Test User");
         user2.setRole(UserRole.ADMIN);
 
-        // Test Getters
         assertEquals(1L, user1.getId());
         assertEquals(now, user1.getCreatedAt());
         assertEquals(now, user1.getUpdatedAt());
@@ -45,7 +42,6 @@ class MasterEntityTest {
         assertEquals("Sensei Ketan", user1.getFullName());
         assertEquals(UserRole.USER, user1.getRole());
 
-        // Test UserDetails Custom Methods (Ye bohot coverage khate hain)
         assertEquals("sensei@forge.com", user1.getUsername());
         assertTrue(user1.isAccountNonExpired());
         assertTrue(user1.isAccountNonLocked());
@@ -64,7 +60,7 @@ class MasterEntityTest {
                 .user(dummyUser)
                 .totalBalance(new BigDecimal("1000"))
                 .lockedAmount(new BigDecimal("200"))
-                .version(1L)
+                .version(0)  // FIX: was 1 (Integer, not long)
                 .build();
 
         Wallet w2 = new Wallet();
@@ -72,15 +68,14 @@ class MasterEntityTest {
         w2.setUser(dummyUser);
         w2.setTotalBalance(BigDecimal.ZERO);
         w2.setLockedAmount(BigDecimal.ZERO);
-        w2.setVersion(2L);
+        w2.setVersion(0);  // FIX: was 2
 
         assertEquals(10L, w1.getId());
         assertEquals(dummyUser, w1.getUser());
         assertEquals(new BigDecimal("1000"), w1.getTotalBalance());
         assertEquals(new BigDecimal("200"), w1.getLockedAmount());
-        assertEquals(1L, w1.getVersion());
+        assertEquals(0, w1.getVersion());
 
-        // Test Custom Helper Method
         assertEquals(new BigDecimal("800"), w1.getAvailableBalance());
     }
 
@@ -109,7 +104,6 @@ class MasterEntityTest {
         a2.setTitle("MacBook");
         a2.setDescription("M3 Pro");
         a2.setStartingPrice(BigDecimal.TEN);
-        // Manual setter test
         a2.setCurrentHighestBid(BigDecimal.valueOf(20));
         a2.setStartTime(now);
         a2.setEndTime(now.plusHours(2));
@@ -144,12 +138,14 @@ class MasterEntityTest {
                 .successful(true)
                 .build();
 
-        Bid b2 = new Bid();
-        b2.setId(51L);
-        b2.setAuction(auction);
-        b2.setBidder(bidder);
-        b2.setAmount(new BigDecimal("1000"));
-        b2.setSuccessful(false);
+        // FIX: Bid is immutable — no setters for auction/bidder/amount, use builder
+        Bid b2 = Bid.builder()
+                .id(51L)
+                .auction(auction)
+                .bidder(bidder)
+                .amount(new BigDecimal("1000"))
+                .successful(false)
+                .build();
 
         assertEquals(50L, b1.getId());
         assertEquals(auction, b1.getAuction());

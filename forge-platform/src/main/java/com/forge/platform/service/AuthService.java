@@ -52,7 +52,7 @@ public class AuthService {
                 .user(user)
                 .totalBalance(new BigDecimal("10000.00"))
                 .lockedAmount(BigDecimal.ZERO)
-                .version(0L)
+                .version(0)
                 .build();
 
         walletRepository.save(wallet);

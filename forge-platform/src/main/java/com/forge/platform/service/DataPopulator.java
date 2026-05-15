@@ -47,7 +47,7 @@ public class DataPopulator implements CommandLineRunner {
                     .user(savedUser)
                     .totalBalance(new BigDecimal("14500.00"))
                     .lockedAmount(BigDecimal.ZERO)
-                    .version(0L) // Optimistic locking initial state
+                    .version(0) // Optimistic locking initial state
                     .build();
 
             walletRepository.save(senseiWallet);
