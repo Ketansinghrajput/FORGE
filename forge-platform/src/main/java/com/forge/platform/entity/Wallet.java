@@ -3,6 +3,7 @@ package com.forge.platform.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+
 import java.math.BigDecimal;
 
 @Entity
@@ -13,21 +14,15 @@ import java.math.BigDecimal;
 public class Wallet extends BaseEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
+    @Column(nullable = false, precision = 15, scale = 2)
     @Builder.Default
-    @Column(nullable = false, precision = 14, scale = 2)
-    private BigDecimal totalBalance = BigDecimal.ZERO;
+    private BigDecimal balance = BigDecimal.ZERO;
 
-    @Builder.Default
-    @Column(nullable = false, precision = 14, scale = 2)
-    private BigDecimal lockedAmount = BigDecimal.ZERO;
-
+    // Optimistic locking — prevents concurrent bids corrupting balance
     @Version
-    private Long version; // Optimistic Locking for concurrent bids
-
-    public BigDecimal getAvailableBalance() {
-        return totalBalance.subtract(lockedAmount);
-    }
+    @Column(nullable = false)
+    private Integer version;
 }
