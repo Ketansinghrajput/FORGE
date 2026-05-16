@@ -1,7 +1,7 @@
 package com.forge.platform.controller;
 
+import com.forge.platform.dto.WalletTransactionDTO;
 import com.forge.platform.entity.User;
-import com.forge.platform.entity.WalletTransaction;
 import com.forge.platform.enums.TransactionType;
 import com.forge.platform.service.WalletService;
 import lombok.RequiredArgsConstructor;
@@ -53,14 +53,14 @@ public class WalletController {
 
     // GET /api/v1/wallet/transactions?page=0&size=10&type=CREDIT
     @GetMapping("/transactions")
-    public ResponseEntity<Page<WalletTransaction>> getTransactions(
+    public ResponseEntity<Page<WalletTransactionDTO>> getTransactions(
             @AuthenticationPrincipal User user,
             @RequestParam(required = false) TransactionType type,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<WalletTransaction> transactions = walletService.getTransactionHistory(user.getEmail(), type, pageable);
+        Page<WalletTransactionDTO> transactions = walletService.getTransactionHistory(user.getEmail(), type, pageable);
         return ResponseEntity.ok(transactions);
     }
 }

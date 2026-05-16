@@ -1,5 +1,6 @@
 package com.forge.platform.service;
 
+import com.forge.platform.dto.WalletTransactionDTO;
 import com.forge.platform.entity.User;
 import com.forge.platform.entity.Wallet;
 import com.forge.platform.entity.WalletTransaction;
@@ -127,16 +128,18 @@ public class WalletService {
     }
 
     @Transactional(readOnly = true)
-    public Page<WalletTransaction> getTransactionHistory(String email, TransactionType type, Pageable pageable) {
+    public Page<WalletTransactionDTO> getTransactionHistory(String email, TransactionType type, Pageable pageable) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found!"));
         Wallet wallet = walletRepository.findByUser(user)
                 .orElseThrow(() -> new RuntimeException("Wallet not found!"));
 
         if (type != null) {
-            return walletTransactionRepository.findByWalletIdAndTypeOrderByCreatedAtDesc(wallet.getId(), type, pageable);
+            return walletTransactionRepository.findByWalletIdAndTypeOrderByCreatedAtDesc(wallet.getId(), type, pageable)
+                    .map(WalletTransactionDTO::from);
         }
-        return walletTransactionRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable);
+        return walletTransactionRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId(), pageable)
+                .map(WalletTransactionDTO::from);
     }
 
     public Wallet getWalletByUserId(Long userId) {
