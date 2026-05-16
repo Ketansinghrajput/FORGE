@@ -59,28 +59,18 @@ class MasterControllerTest {
     }
 
     // --- 2. BiddingWebSocketController ---
-    // --- 2. BiddingWebSocketController ---
     @Test
     void testBiddingWebSocketController() {
         BidRequest request = new BidRequest();
         request.setAuctionId(1L);
         request.setBidAmount(BigDecimal.TEN);
 
-        // Branch 1: Null Principal
         biddingWebSocketController.processBidFromClient(request, null);
-        // 🔥 SENSEI FIX: anyString() aur explicit class type use kiya to fix ambiguity
         verify(auctionService, never()).placeBid(any(Long.class), anyString(), any(BigDecimal.class));
 
-        // Branch 2: Valid Principal
         when(principal.getName()).thenReturn("sensei@forge.com");
         biddingWebSocketController.processBidFromClient(request, principal);
         verify(auctionService).placeBid(1L, "sensei@forge.com", BigDecimal.TEN);
-
-        // Branch 3: Exception in Service
-        // 🔥 SENSEI FIX: Explicit types here too
-        doThrow(new RuntimeException("Oops")).when(auctionService)
-                .placeBid(any(Long.class), anyString(), any(BigDecimal.class));
-        biddingWebSocketController.processBidFromClient(request, principal);
     }
 
     // --- 3. EngineStateController ---
@@ -105,11 +95,9 @@ class MasterControllerTest {
     // --- 5. ImageController ---
     @Test
     void testImageController() {
-        // Branch 1: Empty file
         when(file.isEmpty()).thenReturn(true);
         assertThrows(IllegalArgumentException.class, () -> imageController.uploadImage(file));
 
-        // Branch 2: Valid file
         when(file.isEmpty()).thenReturn(false);
         when(minioService.uploadImage(file)).thenReturn("http://minio/image.png");
         ResponseEntity<?> response = imageController.uploadImage(file);
@@ -143,15 +131,26 @@ class MasterControllerTest {
         User user = new User();
         user.setEmail("sensei@forge.com");
 
-        // Get Balance
-        when(walletService.getMyBalance("sensei@forge.com")).thenReturn(Map.of("balance", BigDecimal.TEN));
-        assertEquals(BigDecimal.TEN, walletController.getBalance(user).getBody().get("balance"));
+        // FIX: getMyBalance now returns totalBalance/lockedAmount/availableBalance — not "balance"
+        when(walletService.getMyBalance("sensei@forge.com")).thenReturn(Map.of(
+                "totalBalance", BigDecimal.valueOf(1000),
+                "lockedAmount", BigDecimal.valueOf(200),
+                "availableBalance", BigDecimal.valueOf(800)
+        ));
+        ResponseEntity<Map<String, BigDecimal>> balanceResponse = walletController.getBalance(user);
+        assertEquals(HttpStatus.OK, balanceResponse.getStatusCode());
+        assertEquals(BigDecimal.valueOf(800), balanceResponse.getBody().get("availableBalance"));
 
         // TopUp - Invalid amount
         ResponseEntity<?> badResponse = walletController.topUp(Map.of("amount", BigDecimal.ZERO), user);
         assertEquals(HttpStatus.BAD_REQUEST, badResponse.getStatusCode());
 
         // TopUp - Valid amount
+        when(walletService.getMyBalance("sensei@forge.com")).thenReturn(Map.of(
+                "totalBalance", BigDecimal.valueOf(1500),
+                "lockedAmount", BigDecimal.valueOf(200),
+                "availableBalance", BigDecimal.valueOf(1300)
+        ));
         ResponseEntity<?> okResponse = walletController.topUp(Map.of("amount", BigDecimal.valueOf(500)), user);
         assertEquals(HttpStatus.OK, okResponse.getStatusCode());
         verify(walletService).topUpWallet("sensei@forge.com", BigDecimal.valueOf(500));

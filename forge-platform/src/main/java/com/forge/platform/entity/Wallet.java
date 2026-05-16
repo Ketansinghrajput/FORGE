@@ -19,10 +19,21 @@ public class Wallet extends BaseEntity {
 
     @Column(nullable = false, precision = 15, scale = 2)
     @Builder.Default
-    private BigDecimal balance = BigDecimal.ZERO;
+    private BigDecimal totalBalance = BigDecimal.ZERO;
+
+    // Funds locked during active bids
+    @Column(nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    private BigDecimal lockedAmount = BigDecimal.ZERO;
 
     // Optimistic locking — prevents concurrent bids corrupting balance
     @Version
     @Column(nullable = false)
     private Integer version;
+
+    // Derived — not persisted
+    @Transient
+    public BigDecimal getAvailableBalance() {
+        return totalBalance.subtract(lockedAmount);
+    }
 }

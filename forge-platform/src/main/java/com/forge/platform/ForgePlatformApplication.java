@@ -60,7 +60,7 @@ public class ForgePlatformApplication {
                         .user(savedUser)
                         .totalBalance(new BigDecimal("100000"))
                         .lockedAmount(BigDecimal.ZERO)
-                        .version(0L)
+                        .version(0)
                         .build();
 
                 walletRepository.saveAndFlush(wallet);

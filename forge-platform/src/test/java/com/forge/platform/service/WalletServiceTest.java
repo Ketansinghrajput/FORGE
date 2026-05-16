@@ -4,6 +4,7 @@ import com.forge.platform.entity.User;
 import com.forge.platform.entity.Wallet;
 import com.forge.platform.repository.UserRepository;
 import com.forge.platform.repository.WalletRepository;
+import com.forge.platform.repository.WalletTransactionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,17 +23,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class WalletServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private WalletRepository walletRepository;
+    @Mock private WalletTransactionRepository walletTransactionRepository; // FIX: was missing
+    @Mock private SimpMessagingTemplate messagingTemplate;
 
-    @Mock
-    private WalletRepository walletRepository;
-
-    @Mock
-    private SimpMessagingTemplate messagingTemplate;
-
-    @InjectMocks
-    private WalletService walletService;
+    @InjectMocks private WalletService walletService;
 
     @Test
     void getMyBalance_Success() {
@@ -42,11 +38,16 @@ class WalletServiceTest {
 
         when(userRepository.findByEmail(email)).thenReturn(Optional.of(user));
         when(walletRepository.findByUser(user)).thenReturn(Optional.of(wallet));
+        when(wallet.getTotalBalance()).thenReturn(BigDecimal.valueOf(1200));
+        when(wallet.getLockedAmount()).thenReturn(BigDecimal.valueOf(200));
         when(wallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(1000));
 
         Map<String, BigDecimal> result = walletService.getMyBalance(email);
 
-        assertEquals(BigDecimal.valueOf(1000), result.get("balance"));
+        // FIX: getMyBalance now returns totalBalance/lockedAmount/availableBalance
+        assertEquals(BigDecimal.valueOf(1000), result.get("availableBalance"));
+        assertEquals(BigDecimal.valueOf(1200), result.get("totalBalance"));
+        assertEquals(BigDecimal.valueOf(200), result.get("lockedAmount"));
     }
 
     @Test
@@ -76,6 +77,7 @@ class WalletServiceTest {
 
         verify(wallet).setTotalBalance(BigDecimal.valueOf(1500));
         verify(walletRepository).saveAndFlush(wallet);
+        verify(walletTransactionRepository).save(any());
         verify(messagingTemplate).convertAndSendToUser(eq(email), eq("/queue/wallet"), anyMap());
     }
 
@@ -88,13 +90,14 @@ class WalletServiceTest {
         Wallet wallet = mock(Wallet.class);
 
         when(walletRepository.findByUserWithLock(user)).thenReturn(Optional.of(wallet));
-        when(wallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(1000)); // Sufficient balance
+        when(wallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(1000));
         when(wallet.getLockedAmount()).thenReturn(BigDecimal.valueOf(100));
 
         walletService.lockFunds(user, lockAmount);
 
         verify(wallet).setLockedAmount(BigDecimal.valueOf(300));
         verify(walletRepository).saveAndFlush(wallet);
+        verify(walletTransactionRepository).save(any());
         verify(messagingTemplate).convertAndSendToUser(eq(user.getEmail()), eq("/queue/wallet"), anyMap());
     }
 
@@ -106,11 +109,10 @@ class WalletServiceTest {
         Wallet wallet = mock(Wallet.class);
 
         when(walletRepository.findByUserWithLock(user)).thenReturn(Optional.of(wallet));
-        when(wallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(500)); // Insufficient
+        when(wallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(500));
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> walletService.lockFunds(user, lockAmount));
         assertTrue(exception.getMessage().contains("Insufficient funds!"));
-
         verify(walletRepository, never()).saveAndFlush(any());
     }
 
@@ -130,6 +132,7 @@ class WalletServiceTest {
 
         verify(wallet).setLockedAmount(BigDecimal.valueOf(300));
         verify(walletRepository).saveAndFlush(wallet);
+        verify(walletTransactionRepository).save(any());
         verify(messagingTemplate).convertAndSendToUser(eq(user.getEmail()), eq("/queue/wallet"), anyMap());
     }
 
@@ -142,13 +145,14 @@ class WalletServiceTest {
         Wallet wallet = mock(Wallet.class);
 
         when(walletRepository.findByUserWithLock(user)).thenReturn(Optional.of(wallet));
-        when(wallet.getLockedAmount()).thenReturn(BigDecimal.valueOf(200)); // Unlocking more than locked
+        when(wallet.getLockedAmount()).thenReturn(BigDecimal.valueOf(200));
         when(wallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(1000));
 
         walletService.unlockFunds(user, unlockAmount);
 
-        verify(wallet).setLockedAmount(BigDecimal.ZERO); // Should floor at 0
+        verify(wallet).setLockedAmount(BigDecimal.ZERO);
         verify(walletRepository).saveAndFlush(wallet);
+        verify(walletTransactionRepository).save(any());
     }
 
     @Test
@@ -162,29 +166,23 @@ class WalletServiceTest {
         Wallet winnerWallet = mock(Wallet.class);
         Wallet sellerWallet = mock(Wallet.class);
 
-        // Mock Winner
         when(walletRepository.findByUserWithLock(winner)).thenReturn(Optional.of(winnerWallet));
         when(winnerWallet.getTotalBalance()).thenReturn(BigDecimal.valueOf(2000));
         when(winnerWallet.getLockedAmount()).thenReturn(BigDecimal.valueOf(500));
         when(winnerWallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(1500));
 
-        // Mock Seller
         when(walletRepository.findByUserWithLock(seller)).thenReturn(Optional.of(sellerWallet));
         when(sellerWallet.getTotalBalance()).thenReturn(BigDecimal.valueOf(1000));
         when(sellerWallet.getAvailableBalance()).thenReturn(BigDecimal.valueOf(1500));
 
         walletService.settleAuction(winner, seller, auctionAmount);
 
-        // Winner Assertions
-        verify(winnerWallet).setTotalBalance(BigDecimal.valueOf(1500)); // 2000 - 500
-        verify(winnerWallet).setLockedAmount(BigDecimal.ZERO); // 500 - 500
+        verify(winnerWallet).setTotalBalance(BigDecimal.valueOf(1500));
+        verify(winnerWallet).setLockedAmount(BigDecimal.ZERO);
         verify(walletRepository).saveAndFlush(winnerWallet);
-
-        // Seller Assertions
-        verify(sellerWallet).setTotalBalance(BigDecimal.valueOf(1500)); // 1000 + 500
+        verify(sellerWallet).setTotalBalance(BigDecimal.valueOf(1500));
         verify(walletRepository).saveAndFlush(sellerWallet);
-
-        // Broadcast Assertions (1 for winner, 1 for seller)
+        verify(walletTransactionRepository, times(2)).save(any());
         verify(messagingTemplate, times(2)).convertAndSendToUser(anyString(), eq("/queue/wallet"), anyMap());
     }
 
@@ -197,11 +195,10 @@ class WalletServiceTest {
         Wallet winnerWallet = mock(Wallet.class);
 
         when(walletRepository.findByUserWithLock(winner)).thenReturn(Optional.of(winnerWallet));
-        when(winnerWallet.getTotalBalance()).thenReturn(BigDecimal.valueOf(500)); // Balance less than auction price
+        when(winnerWallet.getTotalBalance()).thenReturn(BigDecimal.valueOf(500));
 
         IllegalStateException exception = assertThrows(IllegalStateException.class, () -> walletService.settleAuction(winner, seller, auctionAmount));
         assertTrue(exception.getMessage().contains("Critical Error"));
-
         verify(walletRepository, never()).saveAndFlush(any());
     }
 

@@ -31,7 +31,7 @@ class BiddingServiceTest {
     @Mock private WalletRepository walletRepository;
     @Mock private BidRepository bidRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
-    @Mock private WalletService walletService;
+    // FIX: removed @Mock WalletService — BiddingService doesn't have walletService field
 
     @InjectMocks private BiddingService biddingService;
 
@@ -42,7 +42,12 @@ class BiddingServiceTest {
     @BeforeEach
     void setUp() {
         bidder = User.builder().id(1L).email("sensei@forge.com").fullName("Ketan Singh").build();
-        bidderWallet = Wallet.builder().user(bidder).totalBalance(new BigDecimal("50000")).lockedAmount(BigDecimal.ZERO).build();
+        bidderWallet = Wallet.builder()
+                .user(bidder)
+                .totalBalance(new BigDecimal("50000"))
+                .lockedAmount(BigDecimal.ZERO)
+                .version(0)
+                .build();
 
         auction = Auction.builder()
                 .id(100L)
@@ -50,9 +55,7 @@ class BiddingServiceTest {
                 .status(AuctionStatus.ACTIVE)
                 .endTime(LocalDateTime.now().plusDays(1))
                 .build();
-
-        // 🔥 SENSEI FIX: Forcefully injecting the walletService mock bypassing constructor
-        org.springframework.test.util.ReflectionTestUtils.setField(biddingService, "walletService", walletService);
+        // FIX: removed ReflectionTestUtils.setField — walletService doesn't exist in BiddingService
     }
 
     @Test
@@ -79,9 +82,13 @@ class BiddingServiceTest {
 
     @Test
     void placeBid_ShouldSucceed_AndRefundPreviousBidder() {
-        // Setup Previous Bidder
         User prevBidder = User.builder().id(2L).email("prev@forge.com").build();
-        Wallet prevWallet = Wallet.builder().user(prevBidder).totalBalance(new BigDecimal("10000")).lockedAmount(new BigDecimal("1500")).build();
+        Wallet prevWallet = Wallet.builder()
+                .user(prevBidder)
+                .totalBalance(new BigDecimal("10000"))
+                .lockedAmount(new BigDecimal("1500"))
+                .version(0)
+                .build();
 
         auction.setHighestBidder(prevBidder);
         auction.setCurrentHighestBid(new BigDecimal("1500"));
@@ -90,25 +97,19 @@ class BiddingServiceTest {
         when(walletRepository.findByUser(bidder)).thenReturn(Optional.of(bidderWallet));
         when(walletRepository.findByUser(prevBidder)).thenReturn(Optional.of(prevWallet));
         when(bidRepository.save(any(Bid.class))).thenAnswer(i -> i.getArguments()[0]);
-        when(walletService.getWalletByUserId(1L)).thenReturn(bidderWallet);
 
-        // Act
         Bid result = biddingService.placeBid(100L, bidder, new BigDecimal("2000"));
 
-        // Assert
         assertNotNull(result);
         assertEquals(new BigDecimal("2000"), auction.getCurrentHighestBid());
         assertEquals(bidder, auction.getHighestBidder());
 
-        // Verify refund logic
         verify(walletRepository).save(prevWallet);
         assertEquals(BigDecimal.ZERO, prevWallet.getLockedAmount());
 
-        // Verify lock logic for new bidder
         verify(walletRepository).save(bidderWallet);
         assertEquals(new BigDecimal("2000"), bidderWallet.getLockedAmount());
 
-        // Verify broadcast
         verify(messagingTemplate).convertAndSend(anyString(), any(Object.class));
     }
 }
