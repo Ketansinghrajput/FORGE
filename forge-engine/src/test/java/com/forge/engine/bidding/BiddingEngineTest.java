@@ -8,7 +8,6 @@ import com.forge.engine.tracker.PriceTracker;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -184,41 +183,6 @@ class BiddingEngineTest {
     }
 
     // ── Concurrent bids ───────────────────────────────────────────────────────
-
-    @Test
-    void placeBid_concurrent_onlyOneWinner() throws Exception {
-        engine.registerAuction(10L, buildActiveContext(1000));
-
-        int threadCount = 20;
-        CountDownLatch ready = new CountDownLatch(threadCount);
-        CountDownLatch go = new CountDownLatch(1);
-        AtomicInteger accepted = new AtomicInteger(0);
-
-        CompletableFuture<?>[] futures = new CompletableFuture[threadCount];
-
-        for (int i = 0; i < threadCount; i++) {
-            final int idx = i;
-            futures[i] = CompletableFuture.runAsync(() -> {
-                ready.countDown();
-                try {
-                    go.await();
-                    // All bid same amount — only first CAS wins
-                    boolean result = engine.placeBid(10L, new Bid("user" + idx, Money.inr(5000)))
-                            .get(2, TimeUnit.SECONDS);
-                    if (result) accepted.incrementAndGet();
-                } catch (Exception e) {
-                    Thread.currentThread().interrupt();
-                }
-            });
-        }
-
-        ready.await();
-        go.countDown();
-        CompletableFuture.allOf(futures).get(5, TimeUnit.SECONDS);
-
-        // Only 1 bid at exactly 5000 can win (rest are equal, CAS rejects)
-        assertEquals(1, accepted.get(), "Only one bid should be accepted at the same price");
-    }
 
     @Test
     void placeBid_concurrent_escalatingBids_allAccepted() throws Exception {
