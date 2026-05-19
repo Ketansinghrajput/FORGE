@@ -4,9 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import org.junit.jupiter.api.Disabled;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
-// 🔥 SENSEI FIX: Main files me bina change kiye, yahan se property override kar di
+// Requires PostgreSQL + Redis running — disabled for CI/unit test runs
+@Disabled("Integration test — needs full infra (PostgreSQL, Redis, MinIO)")
 @SpringBootTest(properties = {
         "spring.main.allow-bean-definition-overriding=true",
         "spring.main.banner-mode=off"
