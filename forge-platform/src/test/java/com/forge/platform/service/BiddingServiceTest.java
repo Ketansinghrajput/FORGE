@@ -80,6 +80,84 @@ class BiddingServiceTest {
         assertThrows(IllegalStateException.class, () -> biddingService.placeBid(100L, bidder, new BigDecimal("2000")));
     }
 
+    // Case C: First bid ever on auction
+    @Test
+    void placeBid_ShouldSucceed_WhenFirstBidOnAuction() {
+        // auction has no previous bidder
+        auction.setHighestBidder(null);
+        auction.setCurrentHighestBid(null);
+
+        when(auctionRepository.findByIdWithLock(100L)).thenReturn(Optional.of(auction));
+        when(walletRepository.findByUser(bidder)).thenReturn(Optional.of(bidderWallet));
+        when(bidRepository.save(any(Bid.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Bid result = biddingService.placeBid(100L, bidder, new BigDecimal("2000"));
+
+        assertNotNull(result);
+        assertEquals(bidder, auction.getHighestBidder());
+        assertEquals(new BigDecimal("2000"), auction.getCurrentHighestBid());
+        // Full bid amount locked
+        assertEquals(new BigDecimal("2000"), bidderWallet.getLockedAmount());
+        verify(messagingTemplate).convertAndSend(anyString(), any(Object.class));
+    }
+
+    // Case B: Same user raises their own bid
+    @Test
+    void placeBid_ShouldSucceed_WhenSameUserRaisesBid() {
+        auction.setHighestBidder(bidder); // same user
+        auction.setCurrentHighestBid(new BigDecimal("1500"));
+        bidderWallet.setLockedAmount(new BigDecimal("1500")); // already locked
+
+        when(auctionRepository.findByIdWithLock(100L)).thenReturn(Optional.of(auction));
+        when(walletRepository.findByUser(bidder)).thenReturn(Optional.of(bidderWallet));
+        when(bidRepository.save(any(Bid.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        Bid result = biddingService.placeBid(100L, bidder, new BigDecimal("2500"));
+
+        assertNotNull(result);
+        // Only difference (2500 - 1500 = 1000) should be additionally locked
+        assertEquals(new BigDecimal("2500"), bidderWallet.getLockedAmount());
+        verify(walletRepository, times(1)).save(bidderWallet); // only bidder wallet saved, no prev wallet
+        verify(messagingTemplate).convertAndSend(anyString(), any(Object.class));
+    }
+
+    @Test
+    void placeBid_ShouldThrowException_WhenBidTooLow() {
+        auction.setCurrentHighestBid(new BigDecimal("3000"));
+
+        when(auctionRepository.findByIdWithLock(100L)).thenReturn(Optional.of(auction));
+        when(walletRepository.findByUser(bidder)).thenReturn(Optional.of(bidderWallet));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> biddingService.placeBid(100L, bidder, new BigDecimal("2000")));
+    }
+
+    @Test
+    void placeBid_ShouldThrowException_WhenInsufficientWalletBalance() {
+        bidderWallet.setTotalBalance(new BigDecimal("500")); // not enough
+
+        when(auctionRepository.findByIdWithLock(100L)).thenReturn(Optional.of(auction));
+        when(walletRepository.findByUser(bidder)).thenReturn(Optional.of(bidderWallet));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> biddingService.placeBid(100L, bidder, new BigDecimal("2000")));
+    }
+
+    @Test
+    void placeBid_ShouldExtendAuctionEndTime_WhenBidInLastMinute() {
+        auction.setEndTime(LocalDateTime.now().plusSeconds(30)); // last 30 seconds
+        LocalDateTime originalEnd = auction.getEndTime();
+
+        when(auctionRepository.findByIdWithLock(100L)).thenReturn(Optional.of(auction));
+        when(walletRepository.findByUser(bidder)).thenReturn(Optional.of(bidderWallet));
+        when(bidRepository.save(any(Bid.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        biddingService.placeBid(100L, bidder, new BigDecimal("2000"));
+
+        // End time should be extended by 5 minutes
+        assertTrue(auction.getEndTime().isAfter(originalEnd));
+    }
+
     @Test
     void placeBid_ShouldSucceed_AndRefundPreviousBidder() {
         User prevBidder = User.builder().id(2L).email("prev@forge.com").build();
