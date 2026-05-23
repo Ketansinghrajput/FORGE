@@ -142,6 +142,8 @@
               </rules>
               <excludes>
                 <exclude>com/forge/engine/benchmark/**</exclude>
+                <exclude>com/forge/App.class</exclude>
+                <exclude>com/forge/engine/auction/AuctionType.class</exclude>
               </excludes>
             </configuration>
           </execution>

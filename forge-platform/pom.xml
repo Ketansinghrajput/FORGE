@@ -182,7 +182,7 @@
 
     <build>
         <plugins>
-            <!-- 🚀 Spring Boot Maven Plugin Updated for Docker Executable JAR -->
+            <!--  Spring Boot Maven Plugin Updated for Docker Executable JAR -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -250,6 +250,20 @@
                         <id>report</id>
                         <phase>verify</phase>
                         <goals><goal>report</goal></goals>
+                        <configuration>
+                            <excludes>
+                                <!-- Main app entrypoint -->
+                                <exclude>com/forge/platform/ForgePlatformApplication.class</exclude>
+                                <!-- Spring config classes - infra, not business logic -->
+                                <exclude>com/forge/platform/config/**</exclude>
+                                <!-- Quartz/scheduler jobs - needs running scheduler -->
+                                <exclude>com/forge/platform/scheduler/**</exclude>
+                                <!-- JPA entities - Lombok generated, no logic -->
+                                <exclude>com/forge/platform/entity/**</exclude>
+                                <!-- DTOs - records/Lombok, no logic -->
+                                <exclude>com/forge/platform/dto/**</exclude>
+                            </excludes>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
