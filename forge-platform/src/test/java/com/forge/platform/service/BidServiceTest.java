@@ -37,7 +37,6 @@ class BidServiceTest {
         auction.setStatus(AuctionStatus.ACTIVE);
         auction.setImageUrl("http://img.test/guitar.jpg");
 
-        // FIX: Bid is immutable — use builder instead of setters
         return Bid.builder()
                 .id(bidId)
                 .amount(bidAmount)
