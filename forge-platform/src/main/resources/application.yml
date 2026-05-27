@@ -4,13 +4,11 @@ spring:
   profiles:
     active: dev
 
-  # 🔥 SENSEI FIX: Added Multipart config to bypass 1MB default upload limit
   servlet:
     multipart:
       max-file-size: 5MB
       max-request-size: 10MB
 
-  # 📧 EMAIL CONFIG (Mailhog setup for Phase 3 Notifications)
   mail:
     host: localhost
     port: 1025                 # Mailhog SMTP port
