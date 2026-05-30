@@ -73,7 +73,6 @@ public class BiddingEngine {
     public void endAuction(Long auctionId) {
         AuctionContext context = activeAuctions.get(auctionId);
         if (context != null) {
-            // Write Lock lag jayega, aur is auction ki processing stop
             context.getStateMachine().transitionToEnded();
             activeAuctions.remove(auctionId);
             log.info("Auction {} ended and removed from Engine Memory.", auctionId);
