@@ -74,12 +74,12 @@ public class DatabaseInitializer {
                 auctionRepo.save(auction);
 
                 System.out.println("---");
-                System.out.println("🟢 Persistence Ready: Forge DB Seeded Successfully!");
-                System.out.println("🟢 Bidder: sensei@forge.com | Wallet: ₹50,000");
-                System.out.println("🟢 Auction ID: 1 | Title: Rolex Submariner");
+                System.out.println(" Persistence Ready: Forge DB Seeded Successfully!");
+                System.out.println(" Bidder: sensei@forge.com | Wallet: ₹50,000");
+                System.out.println(" Auction ID: 1 | Title: Rolex Submariner");
                 System.out.println("---");
             } else {
-                System.out.println("🟡 DB Initializer: Data already exists, skipping seed.");
+                System.out.println(" DB Initializer: Data already exists, skipping seed.");
             }
         };
     }
