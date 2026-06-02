@@ -5,16 +5,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class PriceTracker {
 
-    // RAM mein direct value store aur read karne ke liye, bina locks ke
     private final AtomicReference<Bid> currentHighestBid;
 
     public PriceTracker(Bid startingBid) {
         this.currentHighestBid = new AtomicReference<>(startingBid);
     }
 
-    /**
-     * Lock-free atomic update using CAS (Compare-And-Swap) Loop
-     */
+
     public boolean updatePrice(Bid newBid) {
         while (true) {
             // Step 1: Memory se current state read karo
