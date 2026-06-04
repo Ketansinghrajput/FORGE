@@ -23,14 +23,11 @@ public class PriceTracker {
             }
 
             // Step 3: CAS Operation (Hardware level atomic instruction)
-            // Agar memory mein abhi bhi 'currentBid' hi hai, toh usko 'newBid' se replace kar do.
             if (currentHighestBid.compareAndSet(currentBid, newBid)) {
                 return true; // Bid accepted and updated
             }
 
-            // Agar CAS false return karta hai, iska matlab kisi aur thread (user) ne
             // Step 1 aur Step 3 ke beech mein price badha diya.
-            // Loop wapas ghumega, nayi value read karega, aur wapas try karega.
         }
     }
 
