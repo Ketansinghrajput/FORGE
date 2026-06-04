@@ -23,7 +23,6 @@ public class PriceTracker {
             }
 
             // Step 3: CAS Operation (Hardware level atomic instruction)
-            // Agar memory mein abhi bhi 'currentBid' hi hai, toh usko 'newBid' se replace kar do.
             if (currentHighestBid.compareAndSet(currentBid, newBid)) {
                 return true; // Bid accepted and updated
             }
