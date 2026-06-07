@@ -182,13 +182,11 @@ class BiddingEngineTest {
         assertEquals(0, eventCount.get());
     }
 
-    // ── Concurrent bids ───────────────────────────────────────────────────────
 
     @Test
     void placeBid_concurrent_escalatingBids_allAccepted() throws Exception {
         engine.registerAuction(11L, buildActiveContext(1000));
 
-        // Sequential escalating bids — each should be accepted
         boolean b1 = engine.placeBid(11L, new Bid("u1", Money.inr(2000))).get(2, TimeUnit.SECONDS);
         boolean b2 = engine.placeBid(11L, new Bid("u2", Money.inr(3000))).get(2, TimeUnit.SECONDS);
         boolean b3 = engine.placeBid(11L, new Bid("u3", Money.inr(4000))).get(2, TimeUnit.SECONDS);
